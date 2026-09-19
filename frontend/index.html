@@ -1,388 +1,395 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Setu | Civic signal board</title>
-    <link rel="stylesheet" href="/styles.css?v=9">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-  </head>
-  <body>
-    <header class="site-header">
-      <a class="brand" href="/" aria-label="Setu home">
-        <span class="brand-lockup">
-          <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
-          <span class="logo-mark">Setu</span>
-        </span>
-        <span class="tagline">from complaint to proof</span>
-      </a>
-      <div class="header-actions">
-        <span id="connection-dot" class="connection-dot" title="Connection status" aria-label="Online"></span>
-        <nav aria-label="Main navigation">
-          <a class="nav-link active" href="/">Home</a>
-          <a class="nav-link" href="/about.html">About</a>
-        </nav>
-        <button id="official-login-btn" class="quiet-button auth-btn" type="button">🔐 Official Login</button>
-        <button id="official-logout-btn" class="quiet-button auth-btn auth-logout" type="button" hidden>✓ Official · Logout</button>
-      </div>
-    </header>
 
-    <main>
-      <div id="sync-banner" class="sync-banner" role="status" aria-live="polite" hidden></div>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Setu | Civic signal board</title>
+  <link rel="stylesheet" href="styles.css?v=9">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
 
-      <nav class="app-tabs" aria-label="Setu sections" role="tablist">
-        <button class="app-tab active" id="tab-report" type="button" role="tab"
-          aria-selected="true" aria-controls="report-panel" data-panel="report-panel">Report an issue</button>
-        <button class="app-tab" id="tab-board" type="button" role="tab"
-          aria-selected="false" aria-controls="board-panel" data-panel="board-panel">Priority board</button>
-        <button class="app-tab" id="tab-impact" type="button" role="tab"
-          aria-selected="false" aria-controls="impact-panel" data-panel="impact-panel">Expected impact</button>
+<body>
+  <header class="site-header">
+    <a class="brand" href="/" aria-label="Setu home">
+      <span class="brand-lockup">
+        <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="logo-mark">Setu</span>
+      </span>
+      <span class="tagline">from complaint to proof</span>
+    </a>
+    <div class="header-actions">
+      <span id="connection-dot" class="connection-dot" title="Connection status" aria-label="Online"></span>
+      <nav aria-label="Main navigation">
+        <a class="nav-link active" href="/">Home</a>
+        <a class="nav-link" href="/about.html">About</a>
       </nav>
+      <button id="official-login-btn" class="quiet-button auth-btn" type="button">🔐 Official Login</button>
+      <button id="official-logout-btn" class="quiet-button auth-btn auth-logout" type="button" hidden>✓ Official ·
+        Logout</button>
+    </div>
+  </header>
 
-      <!-- ── Report tab ──────────────────────────────────────────────────── -->
-      <section class="report-section tab-panel" id="report-panel" role="tabpanel" aria-labelledby="tab-report">
-        <div class="section-intro">
-          <h1 id="report-heading">Report an issue</h1>
+  <main>
+    <div id="sync-banner" class="sync-banner" role="status" aria-live="polite" hidden></div>
+
+    <nav class="app-tabs" aria-label="Setu sections" role="tablist">
+      <button class="app-tab active" id="tab-report" type="button" role="tab" aria-selected="true"
+        aria-controls="report-panel" data-panel="report-panel">Report an issue</button>
+      <button class="app-tab" id="tab-board" type="button" role="tab" aria-selected="false" aria-controls="board-panel"
+        data-panel="board-panel">Priority board</button>
+      <button class="app-tab" id="tab-impact" type="button" role="tab" aria-selected="false"
+        aria-controls="impact-panel" data-panel="impact-panel">Expected impact</button>
+    </nav>
+
+    <!-- ── Report tab ──────────────────────────────────────────────────── -->
+    <section class="report-section tab-panel" id="report-panel" role="tabpanel" aria-labelledby="tab-report">
+      <div class="section-intro">
+        <h1 id="report-heading">Report an issue</h1>
+      </div>
+      <p id="form-validation" class="form-validation" role="alert" aria-live="assertive"></p>
+      <form id="complaint-form" novalidate>
+
+        <label>
+          Category
+          <select id="category" name="category" required>
+            <option value="">Choose a category</option>
+            <option value="pothole">Pothole</option>
+            <option value="streetlight">Streetlight</option>
+            <option value="waste">Waste</option>
+            <option value="water">Water</option>
+            <option value="other">Other</option>
+          </select>
+        </label>
+
+        <label for="ward-input">Location / Ward</label>
+        <input type="text" id="ward-input" name="ward" placeholder="Enter your location or ward name..." required />
+
+        <label style="grid-column:1/-1">
+          Photo
+          <input id="photo" name="photo" type="file" accept="image/*" capture="environment">
+        </label>
+        <img id="photo-preview" alt="Selected complaint photo preview" hidden>
+
+        <div class="classifier-row" style="grid-column:1/-1">
+          <p id="classifier-status" aria-live="polite">Upload a photo — auto-detects pothole, garbage, or water.</p>
+          <span id="classifier-confidence-badge" class="confidence-badge" hidden
+            aria-label="Classifier confidence"></span>
         </div>
-        <p id="form-validation" class="form-validation" role="alert" aria-live="assertive"></p>
-        <form id="complaint-form" novalidate>
+        <a id="correct-classification" href="#category" hidden>Wrong result? Correct the category ↑</a>
 
-          <label>
-            Category
-            <select id="category" name="category" required>
-              <option value="">Choose a category</option>
-              <option value="pothole">Pothole</option>
-              <option value="streetlight">Streetlight</option>
-              <option value="waste">Waste</option>
-              <option value="water">Water</option>
-              <option value="other">Other</option>
+        <label style="grid-column:1/-1">
+          Description
+          <textarea id="description" name="description" rows="4" required></textarea>
+        </label>
+
+        <div class="voice-input-group">
+          <label for="voice-lang">Voice Language</label>
+          <div class="voice-controls">
+            <select id="voice-lang" aria-label="Select voice language">
+              <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
+              <option value="en-IN" selected>English (India)</option>
+              <option value="hi-IN">Hindi (हिंदी)</option>
             </select>
-          </label>
+            <button id="voice-button" type="button">🎙️ Add voice note</button>
+          </div>
+        </div>
+        <p id="voice-status">Voice input is optional. Speaks in Kannada, English, or Hindi.</p>
 
+        <!-- Voice transcript review box — shown after recording ends -->
+        <div id="voice-review-box" class="voice-review-box" hidden aria-live="polite"
+          aria-label="Voice transcript review">
+          <div class="voice-review-header">
+            <span class="voice-review-icon">🎙</span>
+            <span class="voice-review-title">Review your recording</span>
+          </div>
+          <!-- Live interim text while recording -->
+          <p id="voice-interim-text" class="voice-interim-text">Waiting for speech…</p>
+          <!-- Final transcript for review -->
+          <p id="voice-final-text" class="voice-final-text" hidden></p>
+          <!-- Inline edit field -->
+          <textarea id="voice-edit-input" class="voice-edit-input" rows="3" hidden placeholder="Edit transcript here…"
+            aria-label="Edit voice transcript"></textarea>
+          <!-- Action buttons -->
+          <div class="voice-review-actions">
+            <button id="voice-use-btn" type="button" class="voice-action-btn voice-use" hidden>✓ Use this</button>
+            <button id="voice-edit-btn" type="button" class="voice-action-btn voice-edit" hidden>✎ Edit</button>
+            <button id="voice-confirm-edit-btn" type="button" class="voice-action-btn voice-confirm" hidden>✓ Confirm
+              edit</button>
+            <button id="voice-redo-btn" type="button" class="voice-action-btn voice-redo" hidden>↺ Record again</button>
+          </div>
+        </div>
+
+        <button id="submit-report" type="submit">Save report</button>
+        <p id="form-status" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <!-- ── Priority board tab ─────────────────────────────────────────── -->
+    <section class="dashboard-section tab-panel" id="board-panel" role="tabpanel" aria-labelledby="tab-board" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Public view</p>
+          <h2 id="dashboard-heading">Priority board</h2>
+          <p class="section-copy">Live civic issues ordered by GNN road-centrality urgency across Bangalore wards.</p>
+        </div>
+        <div class="board-actions">
+          <span id="api-status" class="count-label">Connecting…</span>
+          <span id="dashboard-count" class="count-label">Loading…</span>
+          <label class="demo-toggle"><input id="demo-toggle" type="checkbox" checked> Demo mode</label>
+          <button id="trigger-agent-sla" class="quiet-button" type="button">⚡ Run SLA Sentinel Agent</button>
+          <a class="quiet-button export-link" href="http://127.0.0.1:5000/api/complaints.csv" download>Export CSV</a>
+          <button id="refresh-dashboard" class="quiet-button" type="button">Refresh</button>
+        </div>
+      </div>
+
+      <!-- Agentic AI activity feed -->
+      <div class="agent-stream-card">
+        <div class="agent-stream-header">
+          <span class="agent-stream-title">🤖 Agentic AI Autonomous Task Log</span>
+          <span class="agent-badge">3 Active Agents</span>
+        </div>
+        <div id="agent-activity-feed" class="agent-activity-feed">
+          <div class="agent-log-item">
+            <span class="agent-tag agent-1">Agent 1: Sync &amp; Deduplicator</span>
+            <span class="agent-msg">Monitoring outbox. Spatial radius 100 m. 3-day duplicate window active.</span>
+          </div>
+          <div class="agent-log-item">
+            <span class="agent-tag agent-2">Agent 2: Classifier &amp; Router</span>
+            <span class="agent-msg">Pixel-analysis classifier ready (v3). Detects pothole, garbage, water. No external
+              model — runs instantly on-device.</span>
+          </div>
+          <div class="agent-log-item">
+            <span class="agent-tag agent-3">Agent 3: GNN SLA Sentinel</span>
+            <span class="agent-msg">3-ward graph loaded (HSR, Koramangala, Indiranagar). 7-day SLA tracking.
+              Auto-escalation every 15 min via APScheduler.</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Map -->
+      <div class="map-card-wrapper">
+        <div class="map-card-header">
+          <div class="map-title-group">
+            <span class="map-icon">🌐</span>
+            <div>
+              <h3 class="map-heading">HSR Layout GNN Spatial Road Network &amp; Live GIS Board</h3>
+              <p class="map-subtext">Real-time graph nodes, road connectivity edges, and prioritised civic complaint
+                pins.</p>
+            </div>
+          </div>
+          <div class="map-legend-pills">
+            <span class="legend-pill legend-high">🔴 High Priority</span>
+            <span class="legend-pill legend-med">🟡 Medium</span>
+            <span class="legend-pill legend-res">🟢 Resolved</span>
+            <span class="legend-pill legend-gnn">🔵 GNN Node</span>
+          </div>
+        </div>
+        <div id="complaint-map" class="complaint-map" aria-label="Complaint locations map"></div>
+      </div>
+
+      <div id="dashboard-list" class="dashboard-list" aria-live="polite"></div>
+    </section>
+
+    <!-- ── Impact tab ─────────────────────────────────────────────────── -->
+    <section class="impact-section tab-panel" id="impact-panel" role="tabpanel" aria-labelledby="tab-impact" hidden>
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Expected impact &amp; Digital Twin</p>
+          <h2 id="impact-heading">Civic signal, measured</h2>
+          <p class="section-copy">Live report patterns and predictive Digital Twin simulations computed from real
+            complaint data.</p>
+        </div>
+      </div>
+
+      <div class="impact-grid">
+        <div class="impact-stat"><strong id="impact-total">—</strong><span>Total reports</span></div>
+        <div class="impact-stat"><strong id="impact-resolved">—</strong><span>Resolved &amp; verified</span></div>
+        <div class="impact-stat"><strong id="impact-duplicates">—</strong><span>Community reports merged</span></div>
+        <div class="impact-stat"><strong id="impact-resolution-time">—</strong><span>Average resolution time</span>
+        </div>
+      </div>
+
+      <!-- Digital Twin (dynamic) -->
+      <div class="digital-twin-card">
+        <h3>🔮 Digital Twin Simulation (What-If Traffic Model)</h3>
+        <p class="digital-twin-copy">
+          Simulates the impact of resolving all complaints at a road-network node.
+          Metrics are computed from live complaint priority scores — not hardcoded.
+        </p>
+        <div class="digital-twin-controls">
+          <label for="twin-ward-select">Ward:</label>
+          <select id="twin-ward-select">
+            <option value="hsr_layout">HSR Layout (Ward 174)</option>
+            <option value="koramangala">Koramangala (Ward 151)</option>
+            <option value="indiranagar">Indiranagar (Ward 81)</option>
+          </select>
+          <label for="twin-node-select">Critical node:</label>
+          <select id="twin-node-select">
+            <!-- populated dynamically by JS based on selected ward -->
+          </select>
+          <button id="run-simulation-btn" class="quiet-button" type="button">▶ Run Digital Twin Simulation</button>
+        </div>
+        <div id="digital-twin-results" class="digital-twin-results" hidden>
+          <div class="twin-metric">
+            <span class="twin-val" id="twin-flow">—</span>
+            <span class="twin-lbl">Traffic Flow Recovery</span>
+          </div>
+          <div class="twin-metric">
+            <span class="twin-val" id="twin-delay">—</span>
+            <span class="twin-lbl">Peak Bottleneck Delay</span>
+          </div>
+          <div class="twin-metric">
+            <span class="twin-val" id="twin-bus">—</span>
+            <span class="twin-lbl">Bus Transit Latency</span>
+          </div>
+          <div class="twin-metric">
+            <span class="twin-val" id="twin-safety">—</span>
+            <span class="twin-lbl">School/Hospital Safety Index</span>
+          </div>
+          <div class="twin-metric">
+            <span class="twin-val" id="twin-open-complaints">—</span>
+            <span class="twin-lbl">Open Complaints at Node</span>
+          </div>
+          <div class="twin-metric">
+            <span class="twin-val" id="twin-avg-priority">—</span>
+            <span class="twin-lbl">Avg Priority Score</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-wrap">
+        <canvas id="category-chart" aria-label="Reports by category bar chart"></canvas>
+        <p id="chart-status" class="empty-state" hidden></p>
+      </div>
+
+      <!-- ── Baseline Comparison ──────────────────────────────────────── -->
+      <div class="comparison-card">
+        <div class="comparison-header">
+          <div class="comparison-header-text">
+            <h3 class="comparison-title">📊 FIFO vs Setu Priority — Baseline Comparison</h3>
+            <p class="comparison-subtitle">
+              Simulates resolving <strong id="cmp-count">—</strong> complaints at
+              <strong>5 per day</strong>.
+              Compares submission-order (FIFO) against Setu's graph-priority ordering.
+              Computed live from current database — not a static claim.
+            </p>
+          </div>
+          <button id="run-comparison-btn" class="comparison-run-btn" type="button">
+            ▶ Run comparison
+          </button>
+        </div>
+
+        <!-- Idle state -->
+        <div id="cmp-idle" class="cmp-idle-state">
+          <span class="cmp-idle-icon">⚖️</span>
+          <p>Click <strong>Run comparison</strong> to compute FIFO vs priority ordering from live data.</p>
+        </div>
+
+        <!-- Loading state -->
+        <div id="cmp-loading" class="cmp-loading-state" hidden>
+          <div class="cmp-spinner" aria-label="Computing…"></div>
+          <p>Running simulation across <span id="cmp-loading-count">30</span> complaints…</p>
+        </div>
+
+        <!-- Results -->
+        <div id="cmp-results" class="cmp-results" hidden aria-live="polite">
+
+          <!-- Two big numbers side by side -->
+          <div class="cmp-numbers-row">
+            <div class="cmp-number-block cmp-fifo">
+              <span class="cmp-number-label">FIFO (submission order)</span>
+              <span class="cmp-number" id="cmp-fifo-days">—</span>
+              <span class="cmp-number-unit">days avg · high-impact</span>
+              <span class="cmp-number-sub" id="cmp-fifo-all">— days avg overall</span>
+            </div>
+
+            <div class="cmp-vs-divider" aria-hidden="true">vs</div>
+
+            <div class="cmp-number-block cmp-setu">
+              <span class="cmp-number-label">Setu priority order</span>
+              <span class="cmp-number" id="cmp-setu-days">—</span>
+              <span class="cmp-number-unit">days avg · high-impact</span>
+              <span class="cmp-number-sub" id="cmp-setu-all">— days avg overall</span>
+            </div>
+          </div>
+
+          <!-- Improvement callout -->
+          <div class="cmp-improvement" id="cmp-improvement-row">
+            <span class="cmp-improvement-pct" id="cmp-pct">—%</span>
+            <span class="cmp-improvement-label" id="cmp-improvement-label">faster for high-impact locations</span>
+          </div>
+
+          <!-- Metadata row -->
+          <div class="cmp-meta-row">
+            <span class="cmp-meta-pill" id="cmp-meta-total">— complaints</span>
+            <span class="cmp-meta-pill cmp-meta-hi" id="cmp-meta-hi">— high-impact</span>
+            <span class="cmp-meta-pill cmp-meta-syn" id="cmp-meta-syn" hidden>— synthetic (padded)</span>
+            <span class="cmp-meta-pill" id="cmp-meta-rate">5 resolved/day</span>
+          </div>
+
+          <!-- Inline bar chart showing ordinal resolution position -->
+          <div class="cmp-bar-section">
+            <p class="cmp-bar-title">Resolution order — high-impact complaints</p>
+            <div class="cmp-bar-legend">
+              <span class="cmp-bar-key cmp-bar-key-fifo">FIFO position</span>
+              <span class="cmp-bar-key cmp-bar-key-setu">Setu position</span>
+            </div>
+            <div id="cmp-bar-chart" class="cmp-bar-chart" aria-label="Resolution order comparison bar chart"></div>
+          </div>
+
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- ── SHA-256 Ledger Modal ────────────────────────────────────────────── -->
+  <div id="blockchain-modal" class="modal-backdrop" hidden>
+    <div class="modal-content" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+      <div class="modal-header">
+        <h3 id="modal-title">🔐 SHA-256 Hash Chain Block Explorer</h3>
+        <button id="close-modal-btn" class="modal-close-btn" type="button" aria-label="Close modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtext">
+          Cryptographic proof lineage for complaint resolution.
+          Each status transition is sealed into an immutable block — hashes are fetched live from the Setu ledger API.
+        </p>
+        <div id="modal-ledger-content" class="ledger-chain-view"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Official Login Modal ───────────────────────────────────────────── -->
+  <div id="login-modal" class="modal-backdrop" hidden>
+    <div class="modal-content modal-narrow" role="dialog" aria-labelledby="login-modal-title" aria-modal="true">
+      <div class="modal-header">
+        <h3 id="login-modal-title">🔐 Official Login</h3>
+        <button id="login-cancel-btn" class="modal-close-btn" type="button" aria-label="Cancel login">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-subtext">Status updates require an authenticated official account. Credentials are verified
+          server-side; a JWT is issued for this session only.</p>
+        <form id="login-form" novalidate>
           <label>
-            Ward
-            <select id="ward-select" name="ward">
-              <option value="hsr_layout">HSR Layout (Ward 174)</option>
-              <option value="koramangala">Koramangala (Ward 151)</option>
-              <option value="indiranagar">Indiranagar (Ward 81)</option>
-            </select>
+            Username
+            <input id="login-username" type="text" autocomplete="username" required placeholder="official">
           </label>
-
-          <label style="grid-column:1/-1">
-            Photo
-            <input id="photo" name="photo" type="file" accept="image/*" capture="environment">
+          <label>
+            Password
+            <input id="login-password" type="password" autocomplete="current-password" required placeholder="••••••••">
           </label>
-          <img id="photo-preview" alt="Selected complaint photo preview" hidden>
-
-          <div class="classifier-row" style="grid-column:1/-1">
-            <p id="classifier-status" aria-live="polite">Upload a photo — auto-detects pothole, garbage, or water.</p>
-            <span id="classifier-confidence-badge" class="confidence-badge" hidden aria-label="Classifier confidence"></span>
-          </div>
-          <a id="correct-classification" href="#category" hidden>Wrong result? Correct the category ↑</a>
-
-          <label style="grid-column:1/-1">
-            Description
-            <textarea id="description" name="description" rows="4" required></textarea>
-          </label>
-
-          <div class="voice-input-group">
-            <label for="voice-lang">Voice Language</label>
-            <div class="voice-controls">
-              <select id="voice-lang" aria-label="Select voice language">
-                <option value="kn-IN">Kannada (ಕನ್ನಡ)</option>
-                <option value="en-IN" selected>English (India)</option>
-                <option value="hi-IN">Hindi (हिंदी)</option>
-              </select>
-              <button id="voice-button" type="button">🎙️ Add voice note</button>
-            </div>
-          </div>
-          <p id="voice-status">Voice input is optional. Speaks in Kannada, English, or Hindi.</p>
-
-          <!-- Voice transcript review box — shown after recording ends -->
-          <div id="voice-review-box" class="voice-review-box" hidden aria-live="polite" aria-label="Voice transcript review">
-            <div class="voice-review-header">
-              <span class="voice-review-icon">🎙</span>
-              <span class="voice-review-title">Review your recording</span>
-            </div>
-            <!-- Live interim text while recording -->
-            <p id="voice-interim-text" class="voice-interim-text">Waiting for speech…</p>
-            <!-- Final transcript for review -->
-            <p id="voice-final-text" class="voice-final-text" hidden></p>
-            <!-- Inline edit field -->
-            <textarea id="voice-edit-input" class="voice-edit-input" rows="3" hidden
-              placeholder="Edit transcript here…" aria-label="Edit voice transcript"></textarea>
-            <!-- Action buttons -->
-            <div class="voice-review-actions">
-              <button id="voice-use-btn"          type="button" class="voice-action-btn voice-use"     hidden>✓ Use this</button>
-              <button id="voice-edit-btn"         type="button" class="voice-action-btn voice-edit"    hidden>✎ Edit</button>
-              <button id="voice-confirm-edit-btn" type="button" class="voice-action-btn voice-confirm" hidden>✓ Confirm edit</button>
-              <button id="voice-redo-btn"         type="button" class="voice-action-btn voice-redo"    hidden>↺ Record again</button>
-            </div>
-          </div>
-
-          <button id="submit-report" type="submit">Save report</button>
-          <p id="form-status" role="status" aria-live="polite"></p>
+          <p id="login-error" class="login-error" role="alert" aria-live="assertive"></p>
+          <button type="submit">Login</button>
         </form>
-      </section>
-
-      <!-- ── Priority board tab ─────────────────────────────────────────── -->
-      <section class="dashboard-section tab-panel" id="board-panel" role="tabpanel" aria-labelledby="tab-board" hidden>
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Public view</p>
-            <h2 id="dashboard-heading">Priority board</h2>
-            <p class="section-copy">Live civic issues ordered by GNN road-centrality urgency across Bangalore wards.</p>
-          </div>
-          <div class="board-actions">
-            <span id="api-status" class="count-label">Connecting…</span>
-            <span id="dashboard-count" class="count-label">Loading…</span>
-            <label class="demo-toggle"><input id="demo-toggle" type="checkbox" checked> Demo mode</label>
-            <button id="trigger-agent-sla" class="quiet-button" type="button">⚡ Run SLA Sentinel Agent</button>
-            <a class="quiet-button export-link" href="/api/complaints.csv" download>Export CSV</a>
-            <button id="refresh-dashboard" class="quiet-button" type="button">Refresh</button>
-          </div>
-        </div>
-
-        <!-- Agentic AI activity feed -->
-        <div class="agent-stream-card">
-          <div class="agent-stream-header">
-            <span class="agent-stream-title">🤖 Agentic AI Autonomous Task Log</span>
-            <span class="agent-badge">3 Active Agents</span>
-          </div>
-          <div id="agent-activity-feed" class="agent-activity-feed">
-            <div class="agent-log-item">
-              <span class="agent-tag agent-1">Agent 1: Sync &amp; Deduplicator</span>
-              <span class="agent-msg">Monitoring outbox. Spatial radius 100 m. 3-day duplicate window active.</span>
-            </div>
-            <div class="agent-log-item">
-              <span class="agent-tag agent-2">Agent 2: Classifier &amp; Router</span>
-              <span class="agent-msg">Pixel-analysis classifier ready (v3). Detects pothole, garbage, water. No external model — runs instantly on-device.</span>
-            </div>
-            <div class="agent-log-item">
-              <span class="agent-tag agent-3">Agent 3: GNN SLA Sentinel</span>
-              <span class="agent-msg">3-ward graph loaded (HSR, Koramangala, Indiranagar). 7-day SLA tracking. Auto-escalation every 15 min via APScheduler.</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Map -->
-        <div class="map-card-wrapper">
-          <div class="map-card-header">
-            <div class="map-title-group">
-              <span class="map-icon">🌐</span>
-              <div>
-                <h3 class="map-heading">HSR Layout GNN Spatial Road Network &amp; Live GIS Board</h3>
-                <p class="map-subtext">Real-time graph nodes, road connectivity edges, and prioritised civic complaint pins.</p>
-              </div>
-            </div>
-            <div class="map-legend-pills">
-              <span class="legend-pill legend-high">🔴 High Priority</span>
-              <span class="legend-pill legend-med">🟡 Medium</span>
-              <span class="legend-pill legend-res">🟢 Resolved</span>
-              <span class="legend-pill legend-gnn">🔵 GNN Node</span>
-            </div>
-          </div>
-          <div id="complaint-map" class="complaint-map" aria-label="Complaint locations map"></div>
-        </div>
-
-        <div id="dashboard-list" class="dashboard-list" aria-live="polite"></div>
-      </section>
-
-      <!-- ── Impact tab ─────────────────────────────────────────────────── -->
-      <section class="impact-section tab-panel" id="impact-panel" role="tabpanel" aria-labelledby="tab-impact" hidden>
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Expected impact &amp; Digital Twin</p>
-            <h2 id="impact-heading">Civic signal, measured</h2>
-            <p class="section-copy">Live report patterns and predictive Digital Twin simulations computed from real complaint data.</p>
-          </div>
-        </div>
-
-        <div class="impact-grid">
-          <div class="impact-stat"><strong id="impact-total">—</strong><span>Total reports</span></div>
-          <div class="impact-stat"><strong id="impact-resolved">—</strong><span>Resolved &amp; verified</span></div>
-          <div class="impact-stat"><strong id="impact-duplicates">—</strong><span>Community reports merged</span></div>
-          <div class="impact-stat"><strong id="impact-resolution-time">—</strong><span>Average resolution time</span></div>
-        </div>
-
-        <!-- Digital Twin (dynamic) -->
-        <div class="digital-twin-card">
-          <h3>🔮 Digital Twin Simulation (What-If Traffic Model)</h3>
-          <p class="digital-twin-copy">
-            Simulates the impact of resolving all complaints at a road-network node.
-            Metrics are computed from live complaint priority scores — not hardcoded.
-          </p>
-          <div class="digital-twin-controls">
-            <label for="twin-ward-select">Ward:</label>
-            <select id="twin-ward-select">
-              <option value="hsr_layout">HSR Layout (Ward 174)</option>
-              <option value="koramangala">Koramangala (Ward 151)</option>
-              <option value="indiranagar">Indiranagar (Ward 81)</option>
-            </select>
-            <label for="twin-node-select">Critical node:</label>
-            <select id="twin-node-select">
-              <!-- populated dynamically by JS based on selected ward -->
-            </select>
-            <button id="run-simulation-btn" class="quiet-button" type="button">▶ Run Digital Twin Simulation</button>
-          </div>
-          <div id="digital-twin-results" class="digital-twin-results" hidden>
-            <div class="twin-metric">
-              <span class="twin-val" id="twin-flow">—</span>
-              <span class="twin-lbl">Traffic Flow Recovery</span>
-            </div>
-            <div class="twin-metric">
-              <span class="twin-val" id="twin-delay">—</span>
-              <span class="twin-lbl">Peak Bottleneck Delay</span>
-            </div>
-            <div class="twin-metric">
-              <span class="twin-val" id="twin-bus">—</span>
-              <span class="twin-lbl">Bus Transit Latency</span>
-            </div>
-            <div class="twin-metric">
-              <span class="twin-val" id="twin-safety">—</span>
-              <span class="twin-lbl">School/Hospital Safety Index</span>
-            </div>
-            <div class="twin-metric">
-              <span class="twin-val" id="twin-open-complaints">—</span>
-              <span class="twin-lbl">Open Complaints at Node</span>
-            </div>
-            <div class="twin-metric">
-              <span class="twin-val" id="twin-avg-priority">—</span>
-              <span class="twin-lbl">Avg Priority Score</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="chart-wrap">
-          <canvas id="category-chart" aria-label="Reports by category bar chart"></canvas>
-          <p id="chart-status" class="empty-state" hidden></p>
-        </div>
-
-        <!-- ── Baseline Comparison ──────────────────────────────────────── -->
-        <div class="comparison-card">
-          <div class="comparison-header">
-            <div class="comparison-header-text">
-              <h3 class="comparison-title">📊 FIFO vs Setu Priority — Baseline Comparison</h3>
-              <p class="comparison-subtitle">
-                Simulates resolving <strong id="cmp-count">—</strong> complaints at
-                <strong>5 per day</strong>.
-                Compares submission-order (FIFO) against Setu's graph-priority ordering.
-                Computed live from current database — not a static claim.
-              </p>
-            </div>
-            <button id="run-comparison-btn" class="comparison-run-btn" type="button">
-              ▶ Run comparison
-            </button>
-          </div>
-
-          <!-- Idle state -->
-          <div id="cmp-idle" class="cmp-idle-state">
-            <span class="cmp-idle-icon">⚖️</span>
-            <p>Click <strong>Run comparison</strong> to compute FIFO vs priority ordering from live data.</p>
-          </div>
-
-          <!-- Loading state -->
-          <div id="cmp-loading" class="cmp-loading-state" hidden>
-            <div class="cmp-spinner" aria-label="Computing…"></div>
-            <p>Running simulation across <span id="cmp-loading-count">30</span> complaints…</p>
-          </div>
-
-          <!-- Results -->
-          <div id="cmp-results" class="cmp-results" hidden aria-live="polite">
-
-            <!-- Two big numbers side by side -->
-            <div class="cmp-numbers-row">
-              <div class="cmp-number-block cmp-fifo">
-                <span class="cmp-number-label">FIFO (submission order)</span>
-                <span class="cmp-number" id="cmp-fifo-days">—</span>
-                <span class="cmp-number-unit">days avg · high-impact</span>
-                <span class="cmp-number-sub" id="cmp-fifo-all">— days avg overall</span>
-              </div>
-
-              <div class="cmp-vs-divider" aria-hidden="true">vs</div>
-
-              <div class="cmp-number-block cmp-setu">
-                <span class="cmp-number-label">Setu priority order</span>
-                <span class="cmp-number" id="cmp-setu-days">—</span>
-                <span class="cmp-number-unit">days avg · high-impact</span>
-                <span class="cmp-number-sub" id="cmp-setu-all">— days avg overall</span>
-              </div>
-            </div>
-
-            <!-- Improvement callout -->
-            <div class="cmp-improvement" id="cmp-improvement-row">
-              <span class="cmp-improvement-pct" id="cmp-pct">—%</span>
-              <span class="cmp-improvement-label" id="cmp-improvement-label">faster for high-impact locations</span>
-            </div>
-
-            <!-- Metadata row -->
-            <div class="cmp-meta-row">
-              <span class="cmp-meta-pill" id="cmp-meta-total">— complaints</span>
-              <span class="cmp-meta-pill cmp-meta-hi" id="cmp-meta-hi">— high-impact</span>
-              <span class="cmp-meta-pill cmp-meta-syn" id="cmp-meta-syn" hidden>— synthetic (padded)</span>
-              <span class="cmp-meta-pill" id="cmp-meta-rate">5 resolved/day</span>
-            </div>
-
-            <!-- Inline bar chart showing ordinal resolution position -->
-            <div class="cmp-bar-section">
-              <p class="cmp-bar-title">Resolution order — high-impact complaints</p>
-              <div class="cmp-bar-legend">
-                <span class="cmp-bar-key cmp-bar-key-fifo">FIFO position</span>
-                <span class="cmp-bar-key cmp-bar-key-setu">Setu position</span>
-              </div>
-              <div id="cmp-bar-chart" class="cmp-bar-chart" aria-label="Resolution order comparison bar chart"></div>
-            </div>
-
-          </div>
-        </div>
-
-      </section>
-    </main>
-
-    <!-- ── SHA-256 Ledger Modal ────────────────────────────────────────────── -->
-    <div id="blockchain-modal" class="modal-backdrop" hidden>
-      <div class="modal-content" role="dialog" aria-labelledby="modal-title" aria-modal="true">
-        <div class="modal-header">
-          <h3 id="modal-title">🔐 SHA-256 Hash Chain Block Explorer</h3>
-          <button id="close-modal-btn" class="modal-close-btn" type="button" aria-label="Close modal">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-subtext">
-            Cryptographic proof lineage for complaint resolution.
-            Each status transition is sealed into an immutable block — hashes are fetched live from the Setu ledger API.
-          </p>
-          <div id="modal-ledger-content" class="ledger-chain-view"></div>
-        </div>
       </div>
     </div>
+  </div>
 
-    <!-- ── Official Login Modal ───────────────────────────────────────────── -->
-    <div id="login-modal" class="modal-backdrop" hidden>
-      <div class="modal-content modal-narrow" role="dialog" aria-labelledby="login-modal-title" aria-modal="true">
-        <div class="modal-header">
-          <h3 id="login-modal-title">🔐 Official Login</h3>
-          <button id="login-cancel-btn" class="modal-close-btn" type="button" aria-label="Cancel login">&times;</button>
-        </div>
-        <div class="modal-body">
-          <p class="modal-subtext">Status updates require an authenticated official account. Credentials are verified server-side; a JWT is issued for this session only.</p>
-          <form id="login-form" novalidate>
-            <label>
-              Username
-              <input id="login-username" type="text" autocomplete="username" required placeholder="official">
-            </label>
-            <label>
-              Password
-              <input id="login-password" type="password" autocomplete="current-password" required placeholder="••••••••">
-            </label>
-            <p id="login-error" class="login-error" role="alert" aria-live="assertive"></p>
-            <button type="submit">Login</button>
-          </form>
-        </div>
-      </div>
-    </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/app.js?v=9"></script>
+</body>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/app.js?v=9"></script>
-  </body>
 </html>
