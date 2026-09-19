@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Setu | Verify complaint resolution</title>
+    <link rel="stylesheet" href="/styles.css?v=8">
+    <style>
+      /* Page-specific overrides */
+      .verify-hero { text-align: center; padding: 48px 20px 32px; }
+      .verify-hero h1 { font-size: clamp(2rem, 6vw, 3.5rem); }
+      .verify-hero p { color: var(--muted); max-width: 520px; margin: 14px auto 0; }
+
+      .verify-lookup { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 28px 0 0; }
+      .verify-lookup input {
+        background: var(--panel); border: 2px solid var(--teal); border-radius: 8px;
+        color: var(--ink); font: inherit; font-size: 1rem; padding: 12px 16px; width: 200px;
+      }
+      .verify-lookup input:focus { outline: 2px solid var(--seafoam); }
+      .verify-lookup button { min-width: 140px; }
+
+      .verify-result { margin: 32px auto; max-width: 720px; }
+
+      .verify-status-banner {
+        border-radius: 12px; padding: 20px 24px; text-align: center;
+        margin-bottom: 24px; font-size: 1.05rem; font-weight: 700;
+      }
+      .verify-status-banner.valid { background: #d9fff0; border: 2px solid var(--seafoam); color: var(--teal); }
+      .verify-status-banner.invalid { background: var(--red-soft); border: 2px solid var(--red); color: var(--red); }
+      .verify-status-banner.pending { background: var(--amber-soft); border: 2px solid var(--amber); color: var(--amber); }
+
+      .verify-status-icon { font-size: 2.4rem; display: block; margin-bottom: 8px; }
+      .verify-complaint-meta { background: var(--teal-soft); border: 1px solid var(--line); border-radius: 10px; padding: 16px 20px; margin-bottom: 20px; font-size: 0.9rem; display: grid; gap: 6px; }
+      .verify-meta-row { display: flex; gap: 8px; }
+      .verify-meta-label { color: var(--muted); font-weight: 700; min-width: 110px; }
+
+      .chain-section h3 { font-family: Georgia, serif; font-size: 1.2rem; margin: 0 0 14px; color: var(--ink); }
+      .chain-connector { display: flex; justify-content: center; margin: 4px 0; color: var(--teal); font-size: 1.3rem; }
+
+      .verify-share { text-align: center; margin-top: 28px; }
+      .verify-share p { color: var(--muted); font-size: 0.85rem; margin: 10px 0 0; }
+      .copy-url-btn { background: var(--teal-soft); border: 1px solid var(--teal); color: var(--teal); font-size: 0.82rem; padding: 8px 14px; border-radius: 6px; cursor: pointer; }
+      .copy-url-btn:hover { background: var(--teal); color: white; }
+
+      #verify-loading { text-align: center; color: var(--muted); padding: 40px; display: none; }
+      #verify-error { color: var(--red); text-align: center; padding: 24px; display: none; }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Setu home">
+        <span class="brand-lockup">
+          <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="logo-mark">Setu</span>
+        </span>
+        <span class="tagline">from complaint to proof</span>
+      </a>
+      <div class="header-actions">
+        <nav aria-label="Main navigation">
+          <a class="nav-link" href="/">Home</a>
+          <a class="nav-link" href="/about.html">About</a>
+        </nav>
+      </div>
+    </header>
+
+    <main>
+      <div class="verify-hero">
+        <p class="eyebrow">Public ledger</p>
+        <h1>Verify a resolution</h1>
+        <p>
+          Enter a complaint ID to cryptographically verify its resolution chain.
+          Each status change is sealed into a SHA-256 hash block — tamper-evident and publicly checkable by anyone.
+        </p>
+        <div class="verify-lookup">
+          <input id="complaint-id-input" type="number" min="1" placeholder="Complaint ID e.g. 42"
+            aria-label="Complaint ID to verify">
+          <button id="verify-btn" type="button">🔍 Verify</button>
+        </div>
+      </div>
+
+      <div id="verify-loading" aria-live="polite">Fetching ledger data…</div>
+      <div id="verify-error" role="alert" aria-live="assertive"></div>
+
+      <div id="verify-result" class="verify-result" hidden></div>
+    </main>
+
+    <script>
+      // ── Helpers ──────────────────────────────────────────────────────────────
+
+      function el(tag, className, text) {
+        const e = document.createElement(tag);
+        if (className) e.className = className;
+        if (text !== undefined) e.textContent = text;
+        return e;
+      }
+
+      function hashSpan(hash, label) {
+        const wrap = document.createElement("div");
+        const lbl = el("span", "verify-meta-label", label + ":");
+        const val = el("span", "ledger-hash", hash || "—");
+        wrap.append(lbl, val);
+        wrap.style.cssText = "display:flex;gap:8px;align-items:baseline;word-break:break-all;font-size:0.78rem;";
+        return wrap;
+      }
+
+      // ── Render result ─────────────────────────────────────────────────────────
+
+      function renderResult(data, complaintId) {
+        const result = document.querySelector("#verify-result");
+        result.innerHTML = "";
+
+        // Status banner
+        const banner = el("div", `verify-status-banner ${data.verified ? "valid" : data.entries === 0 ? "pending" : "invalid"}`);
+        const icon = el("span", "verify-status-icon",
+          data.verified ? "✅" : data.entries === 0 ? "⏳" : "❌");
+        const headline = el("p", "", data.verified
+          ? `Complaint #${complaintId} — Resolution chain is VALID`
+          : data.entries === 0
+            ? `Complaint #${complaintId} — No ledger entries yet`
+            : `Complaint #${complaintId} — Chain integrity FAILED`);
+        headline.style.margin = "0";
+        banner.append(icon, headline);
+        result.append(banner);
+
+        // Complaint metadata
+        if (data.complaint) {
+          const c = data.complaint;
+          const meta = el("div", "verify-complaint-meta");
+          const rows = [
+            ["Category", c.category],
+            ["Status", c.status],
+            ["Ward", c.ward || "HSR Layout"],
+            ["Priority score", c.priority_score ?? "—"],
+            ["Filed at", c.created_at ? new Date(c.created_at.replace(" ", "T") + "Z").toLocaleString() : "—"],
+          ];
+          rows.forEach(([label, value]) => {
+            const row = el("div", "verify-meta-row");
+            row.append(el("span", "verify-meta-label", label + ":"), el("span", "", value));
+            meta.append(row);
+          });
+          result.append(meta);
+        }
+
+        // Chain blocks
+        if (data.chain && data.chain.length > 0) {
+          const chainSection = el("div", "chain-section");
+          chainSection.append(el("h3", "", `Ledger chain (${data.entries} block${data.entries !== 1 ? "s" : ""})`));
+
+          data.chain.forEach((block, idx) => {
+            const blockEl = el("div", "ledger-block");
+            blockEl.style.borderLeftColor = block.valid ? "var(--teal)" : "var(--red)";
+
+            const header = el("div", "ledger-block-header");
+            header.innerHTML = `<span>Block #${block.sequence} — ${block.status}</span><span>${block.valid ? "✓ Valid" : "⚠ Invalid"}</span>`;
+            blockEl.append(header);
+
+            const ts = el("div", "");
+            ts.append(el("span", "verify-meta-label", "Timestamp:"), el("span", "ledger-hash", block.timestamp));
+            ts.style.cssText = "display:flex;gap:8px;align-items:baseline;";
+            blockEl.append(ts);
+
+            if (block.photo_hash) blockEl.append(hashSpan(block.photo_hash, "Photo SHA-256"));
+            blockEl.append(hashSpan(block.previous_hash || "GENESIS", "Previous hash"));
+            blockEl.append(hashSpan(block.hash, "Block hash"));
+
+            chainSection.append(blockEl);
+            if (idx < data.chain.length - 1) {
+              const connector = el("div", "chain-connector", "↓");
+              chainSection.append(connector);
+            }
+          });
+          result.append(chainSection);
+        } else if (data.entries === 0) {
+          result.append(el("p", "modal-subtext",
+            "This complaint has been filed but no status transitions have been recorded in the ledger yet."));
+        }
+
+        // Share / copy link
+        const shareSection = el("div", "verify-share");
+        const copyBtn = el("button", "copy-url-btn", "📋 Copy verification link");
+        copyBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(window.location.href).then(() => {
+            copyBtn.textContent = "✓ Copied!";
+            setTimeout(() => { copyBtn.textContent = "📋 Copy verification link"; }, 2000);
+          });
+        });
+        shareSection.append(copyBtn);
+        shareSection.append(el("p", "", "Share this link with citizens, NGOs, or auditors. The hash chain is independently verifiable."));
+        result.append(shareSection);
+
+        result.hidden = false;
+      }
+
+      // ── Fetch and verify ──────────────────────────────────────────────────────
+
+      async function verifyComplaint(id) {
+        const loading = document.querySelector("#verify-loading");
+        const errorEl = document.querySelector("#verify-error");
+        const result = document.querySelector("#verify-result");
+        loading.style.display = "block";
+        errorEl.style.display = "none";
+        result.hidden = true;
+
+        try {
+          const resp = await fetch(`/api/verify/${id}`);
+          if (!resp.ok) {
+            const body = await resp.json().catch(() => ({}));
+            throw new Error(body.error || `Server returned ${resp.status}`);
+          }
+          const data = await resp.json();
+          renderResult(data, id);
+        } catch (err) {
+          errorEl.textContent = `Could not verify complaint #${id}: ${err.message}`;
+          errorEl.style.display = "block";
+        } finally {
+          loading.style.display = "none";
+        }
+      }
+
+      // ── Boot ──────────────────────────────────────────────────────────────────
+
+      document.querySelector("#verify-btn").addEventListener("click", () => {
+        const id = parseInt(document.querySelector("#complaint-id-input").value, 10);
+        if (!id || id < 1) {
+          document.querySelector("#verify-error").textContent = "Please enter a valid complaint ID.";
+          document.querySelector("#verify-error").style.display = "block";
+          return;
+        }
+        // Update URL without reload so the link is shareable
+        window.history.replaceState({}, "", `/verify/${id}`);
+        verifyComplaint(id);
+      });
+
+      document.querySelector("#complaint-id-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") document.querySelector("#verify-btn").click();
+      });
+
+      // Auto-load from URL path: /verify/42
+      const pathMatch = window.location.pathname.match(/\/verify\/(\d+)/);
+      if (pathMatch) {
+        const id = parseInt(pathMatch[1], 10);
+        document.querySelector("#complaint-id-input").value = id;
+        verifyComplaint(id);
+      }
+    </script>
+  </body>
+</html>

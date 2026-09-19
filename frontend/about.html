@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Setu | About</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="Setu home">
+        <span class="brand-lockup">
+          <span class="brand-symbol" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="logo-mark">Setu</span>
+        </span>
+        <span class="tagline">from complaint to proof</span>
+      </a>
+      <div class="header-actions">
+        <span id="connection-dot" class="connection-dot" title="Connection status" aria-label="Online"></span>
+        <nav aria-label="Main navigation">
+          <a class="nav-link" href="/">Home</a>
+          <a class="nav-link active" href="/about.html">About</a>
+        </nav>
+      </div>
+    </header>
+    <main class="about-main">
+      <section class="about-section" aria-labelledby="about-heading">
+        <p class="eyebrow">A clearer civic loop</p>
+        <h1 id="about-heading">From complaint to proof.</h1>
+        <div class="about-copy">
+          <p>Setu turns everyday civic complaints into visible, accountable action.</p>
+          <p>Reports save on your device when offline, then sync automatically when you reconnect.</p>
+          <p>Priority scores combine road connectivity, nearby public landmarks, and repeated reports.</p>
+          <p>When an issue is resolved, a photo-backed hash chain creates a verification badge anyone can check.</p>
+        </div>
+        <a class="back-link" href="/">Back to the priority board</a>
+      </section>
+    </main>
+    <script>
+      const dot = document.querySelector("#connection-dot");
+      const updateConnection = () => {
+        dot.classList.toggle("offline", !navigator.onLine);
+        dot.title = navigator.onLine ? "Online" : "Offline";
+        dot.setAttribute("aria-label", navigator.onLine ? "Online" : "Offline");
+      };
+      updateConnection();
+      window.addEventListener("online", updateConnection);
+      window.addEventListener("offline", updateConnection);
+    </script>
+  </body>
+</html>
