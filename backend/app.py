@@ -16,8 +16,21 @@ import jwt
 from models.priority import build_seed_graph, nearest_node, priority_for_node, WARD_GRAPHS, find_best_ward_for_location
 
 
+import base64
+
 ROOT_DIR = Path(__file__).resolve().parent.parent
-DATABASE_PATH = ROOT_DIR / "setu.db"
+
+if os.environ.get("VERCEL") or os.environ.get("SETU_DB_PATH"):
+    DATABASE_PATH = Path(os.environ.get("SETU_DB_PATH", "/tmp/setu.db"))
+    if not DATABASE_PATH.exists() and (ROOT_DIR / "setu.db").exists():
+        import shutil
+        try:
+            shutil.copy(ROOT_DIR / "setu.db", DATABASE_PATH)
+        except Exception:
+            pass
+else:
+    DATABASE_PATH = ROOT_DIR / "setu.db"
+
 FRONTEND_DIR = ROOT_DIR / "frontend"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GROQ_MODEL = "llama-3.1-8b-instant"
@@ -1035,6 +1048,72 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
 
 # ── Database initialisation ───────────────────────────────────────────────────
 
+def _auto_seed_initial_data(connection: sqlite3.Connection) -> None:
+    demo_reports = [
+        {
+            "category": "pothole",
+            "description": "Dangerous deep asphalt pothole on 27th Main Road outside Sector 2 School entrance.",
+            "latitude": 12.9060, "longitude": 77.6060,
+            "priority_score": 92.0, "ward": "hsr_layout", "node_id": "school_north",
+        },
+        {
+            "category": "water",
+            "description": "Burst pipeline flooding the road near HSR East Hospital emergency entrance.",
+            "latitude": 12.9060, "longitude": 77.5940,
+            "priority_score": 86.0, "ward": "hsr_layout", "node_id": "hospital_east",
+        },
+        {
+            "category": "waste",
+            "description": "Garbage pile blocking pedestrian footpath near East Market entrance.",
+            "latitude": 12.9000, "longitude": 77.6060,
+            "priority_score": 64.0, "ward": "hsr_layout", "node_id": "east_market",
+        },
+        {
+            "category": "streetlight",
+            "description": "Broken streetlight array near North Bus Interchange (Resolved by BBMP ward crew).",
+            "latitude": 12.9100, "longitude": 77.6060,
+            "priority_score": 48.0, "ward": "hsr_layout", "node_id": "bus_north",
+        },
+    ]
+
+    for report in demo_reports:
+        cursor = connection.execute(
+            """
+            INSERT INTO complaints (
+                category, description, latitude, longitude, ward, node_id,
+                priority_score, status, sla_deadline, is_demo_seed
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'Received', datetime('now', '+7 days'), 1)
+            """,
+            (
+                report["category"], report["description"],
+                report["latitude"], report["longitude"],
+                report["ward"], report["node_id"],
+                report["priority_score"],
+            ),
+        )
+        complaint_id = cursor.lastrowid
+        if report["category"] == "streetlight":
+            timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+            svg = '<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360"><rect width="640" height="360" fill="#39e6b0"/><text x="32" y="190" fill="white" font-size="34" font-family="sans-serif">Resolution proof — HSR Bus Terminal</text></svg>'
+            photo_data = "data:image/svg+xml;base64," + base64.b64encode(svg.encode("utf-8")).decode("ascii")
+            photo_hash = hashlib.sha256(photo_data.encode("utf-8")).hexdigest()
+            payload = f"{complaint_id}|Resolved|{timestamp}|{photo_hash}|"
+            entry_hash = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+            connection.execute(
+                """
+                INSERT INTO resolution_ledger (
+                    complaint_id, sequence_number, status, timestamp,
+                    photo_hash, previous_hash, hash
+                ) VALUES (?, 1, 'Resolved', ?, ?, NULL, ?)
+                """,
+                (complaint_id, timestamp, photo_hash, entry_hash),
+            )
+            connection.execute(
+                "UPDATE complaints SET status = 'Resolved', resolution_photo_data = ? WHERE id = ?",
+                (photo_data, complaint_id),
+            )
+
+
 def initialize_database(app: Flask) -> None:
     with sqlite3.connect(app.config["DATABASE_PATH"]) as connection:
         connection.execute(
@@ -1105,6 +1184,9 @@ def initialize_database(app: Flask) -> None:
             )
             """
         )
+        total_count = connection.execute("SELECT COUNT(*) FROM complaints").fetchone()[0]
+        if total_count == 0:
+            _auto_seed_initial_data(connection)
 
 
 app = create_app()
