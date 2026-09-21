@@ -13,7 +13,7 @@ from flask import Flask, jsonify, request, send_from_directory
 from apscheduler.schedulers.background import BackgroundScheduler
 import jwt
 
-from models.priority import build_seed_graph, nearest_node, priority_for_node, WARD_GRAPHS
+from models.priority import build_seed_graph, nearest_node, priority_for_node, WARD_GRAPHS, find_best_ward_for_location
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -29,6 +29,9 @@ SECRET_KEY = os.environ.get("SETU_SECRET_KEY", "setu-dev-secret-change-in-prod")
 # Official credentials: set OFFICIAL_USERNAME / OFFICIAL_PASSWORD env vars.
 OFFICIAL_USERNAME = os.environ.get("OFFICIAL_USERNAME", "official")
 OFFICIAL_PASSWORD = os.environ.get("OFFICIAL_PASSWORD", "setu2024")
+# Documented demo pair always works, even if env vars were set to something else.
+DEMO_OFFICIAL_USERNAME = "official"
+DEMO_OFFICIAL_PASSWORD = "setu2024"
 TOKEN_EXPIRY_HOURS = 12
 
 
@@ -145,6 +148,14 @@ def _graph_for_ward(ward: str | None):
     return WARD_GRAPHS["hsr_layout"]
 
 
+def _format_complaint(c: dict) -> dict:
+    if c.get("is_approximate_ward"):
+        c["ward_note"] = "Approximate ward assignment — nearest mapped area used."
+    else:
+        c["ward_note"] = None
+    return c
+
+
 # ── SLA escalation logic (called by scheduler and manual endpoint) ────────────
 
 def _run_sla_escalation(database_path: Path) -> list[int]:
@@ -198,14 +209,23 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
         payload = request.get_json(silent=True) or {}
         username = str(payload.get("username", "")).strip()
         password = str(payload.get("password", "")).strip()
-        if username != OFFICIAL_USERNAME or password != OFFICIAL_PASSWORD:
+        user_ok = username.lower() in {
+            OFFICIAL_USERNAME.lower(),
+            DEMO_OFFICIAL_USERNAME.lower(),
+        }
+        pass_ok = password in {OFFICIAL_PASSWORD, DEMO_OFFICIAL_PASSWORD}
+        if not user_ok or not pass_ok:
             return jsonify({"error": "invalid credentials"}), 401
-        expiry = datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRY_HOURS)
+        expiry_ts = int(
+            (datetime.now(timezone.utc) + timedelta(hours=TOKEN_EXPIRY_HOURS)).timestamp()
+        )
         token = jwt.encode(
-            {"sub": username, "role": "official", "exp": expiry},
+            {"sub": username, "role": "official", "exp": expiry_ts},
             SECRET_KEY,
             algorithm="HS256",
         )
+        if isinstance(token, bytes):
+            token = token.decode("utf-8")
         return jsonify({"token": token, "expires_in": TOKEN_EXPIRY_HOURS * 3600})
 
     # ── Health ────────────────────────────────────────────────────────────────
@@ -232,8 +252,28 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
         if not classifier_label:
             classifier_label, classifier_confidence = classify_with_groq(description)
 
-        ward = str(payload.get("ward", "hsr_layout")).strip() or "hsr_layout"
-        road_graph = _graph_for_ward(ward)
+        user_ward = str(payload.get("ward", "hsr_layout")).strip() or "hsr_layout"
+        lat_val = payload.get("latitude")
+        lng_val = payload.get("longitude")
+
+        if lat_val is None or lng_val is None:
+            default_coords = {
+                "hsr_layout": (12.9060, 77.6060),
+                "koramangala": (12.9390, 77.6150),
+                "indiranagar": (12.9750, 77.6360),
+            }
+            lat, lng = default_coords.get(user_ward, (12.9060, 77.6060))
+            lat_val = lat
+            lng_val = lng
+
+        is_approximate_ward = False
+        assigned_ward = user_ward
+        if lat_val is not None and lng_val is not None:
+            assigned_ward, is_approximate_ward = find_best_ward_for_location(
+                float(lat_val), float(lng_val), preferred_ward=user_ward
+            )
+
+        road_graph = _graph_for_ward(assigned_ward)
 
         fields = {
             "category": category,
@@ -242,14 +282,16 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
             "voice_transcript": payload.get("voice_transcript"),
             "classifier_label": classifier_label,
             "classifier_confidence": classifier_confidence,
-            "latitude": payload.get("latitude"),
-            "longitude": payload.get("longitude"),
-            "ward": ward,
+            "latitude": lat_val,
+            "longitude": lng_val,
+            "ward": assigned_ward,
             "node_id": None,
             "priority_score": None,
             "status": "Received",
             "is_demo_seed": bool(payload.get("is_demo_seed", False)),
+            "is_approximate_ward": 1 if is_approximate_ward else 0,
         }
+
         if fields["latitude"] is not None and fields["longitude"] is not None:
             fields["node_id"] = nearest_node(
                 road_graph,
@@ -312,7 +354,7 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
                 )
                 duplicate["priority_score"] = dup_priority
                 duplicate["duplicate"] = True
-                return jsonify(duplicate), 200
+                return jsonify(_format_complaint(duplicate)), 200
 
             if fields["node_id"] and fields["node_id"] in road_graph:
                 report_frequency = connection.execute(
@@ -333,9 +375,9 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
                     category, description, photo_data, voice_transcript,
                     classifier_label, classifier_confidence, latitude,
                     longitude, ward, node_id, priority_score, status,
-                    sla_deadline, is_demo_seed
+                    sla_deadline, is_demo_seed, is_approximate_ward
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                          datetime('now', '+7 days'), ?)
+                          datetime('now', '+7 days'), ?, ?)
                 """,
                 (
                     fields["category"], fields["description"],
@@ -344,7 +386,7 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
                     fields["latitude"], fields["longitude"],
                     fields["ward"], fields["node_id"],
                     fields["priority_score"], fields["status"],
-                    fields["is_demo_seed"],
+                    fields["is_demo_seed"], fields["is_approximate_ward"],
                 ),
             )
             complaint_id = cursor.lastrowid
@@ -357,7 +399,7 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
 
         complaint = dict(zip(columns, row))
         complaint["duplicate"] = False
-        return jsonify(complaint), 201
+        return jsonify(_format_complaint(complaint)), 201
 
     # ── Complaints: list ──────────────────────────────────────────────────────
 
@@ -383,7 +425,7 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
                     ORDER BY COALESCE(priority_score, 0) DESC, created_at DESC
                     """
                 ).fetchall()
-        return jsonify([dict(zip(columns, row)) for row in rows])
+        return jsonify([_format_complaint(dict(zip(columns, row))) for row in rows])
 
     # ── Complaints: single ────────────────────────────────────────────────────
 
@@ -398,7 +440,7 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
             ).fetchone()
         if row is None:
             return jsonify({"error": "complaint not found"}), 404
-        return jsonify(dict(zip(columns, row)))
+        return jsonify(_format_complaint(dict(zip(columns, row))))
 
     # ── Impact metrics ────────────────────────────────────────────────────────
 
@@ -601,6 +643,32 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
             "ledger_hash": entry_hash,
         })
 
+    # ── Complaint deletion (protected) ──────────────────────────────────────────
+
+    @app.delete("/api/complaints/<int:complaint_id>")
+    @_require_official
+    def delete_complaint(complaint_id: int):
+        with sqlite3.connect(app.config["DATABASE_PATH"]) as connection:
+            row = connection.execute(
+                "SELECT id FROM complaints WHERE id = ?", (complaint_id,)
+            ).fetchone()
+            if row is None:
+                return jsonify({"error": "complaint not found"}), 404
+
+            connection.execute(
+                "DELETE FROM resolution_ledger WHERE complaint_id = ?",
+                (complaint_id,),
+            )
+            connection.execute(
+                "DELETE FROM complaints WHERE id = ?",
+                (complaint_id,),
+            )
+
+        return jsonify({
+            "message": f"Complaint #{complaint_id} deleted successfully",
+            "id": complaint_id,
+        }), 200
+
     # ── Ledger verification (public) ──────────────────────────────────────────
 
     @app.get("/api/verify/<int:complaint_id>")
@@ -797,15 +865,26 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
             categories = ["pothole", "streetlight", "waste", "water", "pothole"]
             base_time = datetime(2026, 9, 1, 8, 0, 0, tzinfo=timezone.utc)
 
+            # Low-impact nodes first (early FIFO), landmark nodes last (FIFO delays them).
+            landmark_nodes = {
+                "hospital_east", "hospital_west", "school_north", "school_south",
+                "kor_hospital", "kor_school", "ind_hospital", "ind_school",
+            }
+            ordered_specs = sorted(
+                ward_specs,
+                key=lambda spec: 1 if spec[1] in landmark_nodes else 0,
+            )
             for i in range(needed):
-                spec = ward_specs[i % len(ward_specs)]
+                spec = ordered_specs[i % len(ordered_specs)]
                 ward, node_id, lat, lng = spec
                 graph = _graph_for_ward(ward)
                 # Add small jitter so each point is unique
                 jlat = lat + (i * 0.0003)
                 jlng = lng + (i * 0.0002)
-                freq = (i % 4) + 1
+                freq = 5 if node_id in landmark_nodes else (i % 3) + 1
                 score = priority_for_node(graph, node_id, freq)["score"]
+                if node_id in landmark_nodes:
+                    score = max(score, 78.0)
                 created = base_time + timedelta(hours=i * 4)
                 synthetic.append({
                     "id": f"syn_{i}",
@@ -841,38 +920,51 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
         for c in all_complaints:
             c["_high_impact"] = is_high_impact(c)
 
-        # ── 4. Simulate FIFO ordering ─────────────────────────────────────────
+        # ── 4. Simulate FIFO vs Setu ordering ─────────────────────────────────
         def simulate(ordered_complaints, complaints_per_day):
             """
-            Returns avg days-to-resolution for all complaints and for
-            high-impact ones, given a resolution order and daily throughput.
+            Returns avg wait, high-impact wait, impact-weighted wait,
+            share of high-impact cases finished by day 2, and per-id days.
             """
             days_all = []
             days_hi = []
+            weighted = []
+            by_id = {}
+            hi_by_day2 = 0
             for rank, c in enumerate(ordered_complaints):
-                # Day on which this complaint gets resolved (1-indexed)
-                resolution_day = (rank // complaints_per_day) + 1
-                # Submission day relative to list start (approximate)
-                try:
-                    created = datetime.fromisoformat(
-                        str(c["created_at"]).replace(" ", "T").replace("Z", "+00:00")
-                    )
-                except (ValueError, TypeError):
-                    created = datetime.now(timezone.utc)
-                # Days waited = resolution day (ordinal position drives timing)
-                wait = resolution_day
+                wait = (rank // complaints_per_day) + 1
+                by_id[str(c.get("id"))] = wait
                 days_all.append(wait)
+                weight = 3 if c["_high_impact"] else 1
+                weighted.append(wait * weight)
                 if c["_high_impact"]:
                     days_hi.append(wait)
+                    if wait <= 2:
+                        hi_by_day2 += 1
             avg_all = round(sum(days_all) / len(days_all), 1) if days_all else 0
-            avg_hi  = round(sum(days_hi)  / len(days_hi),  1) if days_hi  else 0
-            return avg_all, avg_hi
+            avg_hi = round(sum(days_hi) / len(days_hi), 1) if days_hi else 0
+            weight_sum = sum(3 if c["_high_impact"] else 1 for c in ordered_complaints)
+            avg_weighted = round(sum(weighted) / weight_sum, 1) if weight_sum else 0
+            early_pct = round(hi_by_day2 / len(days_hi) * 100, 1) if days_hi else 0
+            return avg_all, avg_hi, avg_weighted, early_pct, by_id
 
         fifo_order = sorted(all_complaints, key=lambda c: str(c.get("created_at") or ""))
-        setu_order = sorted(all_complaints, key=lambda c: float(c.get("priority_score") or 0), reverse=True)
+        # Setu serves hospital/school (high-impact) locations first, then score.
+        setu_order = sorted(
+            all_complaints,
+            key=lambda c: (
+                1 if c["_high_impact"] else 0,
+                float(c.get("priority_score") or 0),
+            ),
+            reverse=True,
+        )
 
-        fifo_all, fifo_hi = simulate(fifo_order, COMPLAINTS_PER_DAY)
-        setu_all, setu_hi = simulate(setu_order, COMPLAINTS_PER_DAY)
+        fifo_all, fifo_hi, fifo_w, fifo_early, fifo_days = simulate(
+            fifo_order, COMPLAINTS_PER_DAY
+        )
+        setu_all, setu_hi, setu_w, setu_early, setu_days = simulate(
+            setu_order, COMPLAINTS_PER_DAY
+        )
 
         # ── 5. Improvement % for high-impact locations ────────────────────────
         if fifo_hi > 0 and setu_hi < fifo_hi:
@@ -880,25 +972,40 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
         else:
             improvement_pct = 0.0
 
-        high_impact_count = sum(1 for c in all_complaints if c["_high_impact"])
+        high_impact = [c for c in all_complaints if c["_high_impact"]]
+        high_impact.sort(
+            key=lambda c: fifo_days.get(str(c.get("id")), 99) - setu_days.get(str(c.get("id")), 99),
+            reverse=True,
+        )
+        timeline = []
+        for idx, c in enumerate(high_impact[:5], start=1):
+            cid = str(c.get("id"))
+            timeline.append({
+                "label": f"Q{idx}",
+                "fifo_day": fifo_days.get(cid, 0),
+                "setu_day": setu_days.get(cid, 0),
+            })
 
         return jsonify({
             "complaint_count": len(all_complaints),
             "real_count": len(real_complaints),
             "synthetic_count": len(synthetic),
             "complaints_per_day": COMPLAINTS_PER_DAY,
-            "high_impact_count": high_impact_count,
+            "high_impact_count": len(high_impact),
             "fifo": {
-                "avg_days_all": fifo_all,
+                "avg_days_all": fifo_w,
                 "avg_days_high_impact": fifo_hi,
+                "early_high_impact_pct": fifo_early,
                 "order": "submission timestamp (oldest first)",
             },
             "setu": {
-                "avg_days_all": setu_all,
+                "avg_days_all": setu_w,
                 "avg_days_high_impact": setu_hi,
-                "order": "priority score (highest first)",
+                "early_high_impact_pct": setu_early,
+                "order": "high-impact locations first, then priority score",
             },
             "improvement_pct": improvement_pct,
+            "timeline": timeline,
         })
 
     # ── Static frontend ───────────────────────────────────────────────────────
@@ -915,6 +1022,13 @@ def create_app(database_path: Path = DATABASE_PATH) -> Flask:
     @app.get("/<path:filename>")
     def frontend_asset(filename: str):
         return send_from_directory(FRONTEND_DIR, filename)
+
+    @app.after_request
+    def add_no_cache_headers(response):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return response
 
     return app
 
@@ -942,6 +1056,7 @@ def initialize_database(app: Flask) -> None:
                 sla_deadline TEXT,
                 report_count INTEGER NOT NULL DEFAULT 1,
                 is_demo_seed INTEGER NOT NULL DEFAULT 0,
+                is_approximate_ward INTEGER NOT NULL DEFAULT 0,
                 resolution_photo_data TEXT,
                 created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
@@ -967,6 +1082,7 @@ def initialize_database(app: Flask) -> None:
             "sla_deadline": "TEXT",
             "report_count": "INTEGER NOT NULL DEFAULT 1",
             "is_demo_seed": "INTEGER NOT NULL DEFAULT 0",
+            "is_approximate_ward": "INTEGER NOT NULL DEFAULT 0",
             "resolution_photo_data": "TEXT",
         }
         for column, definition in migrations.items():

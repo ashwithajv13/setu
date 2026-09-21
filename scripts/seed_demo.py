@@ -15,68 +15,29 @@ from backend.app import app
 
 
 DEMO_REPORTS = [
-    # ── HSR Layout ──────────────────────────────────────────────────────────
     {
         "category": "pothole",
-        "description": "Deep pothole near the 27th Main and 14th Cross junction is forcing two-wheelers into oncoming traffic.",
-        "latitude": 12.9115, "longitude": 77.6412,
+        "description": "Dangerous deep asphalt pothole on 27th Main Road outside Sector 2 School entrance.",
+        "latitude": 12.9060, "longitude": 77.6060,
         "priority_score": 92.0, "ward": "hsr_layout",
     },
     {
-        "category": "waste",
-        "description": "Overflowing bins beside HSR BDA Complex are spilling onto the footpath every evening.",
-        "latitude": 12.9131, "longitude": 77.6387,
-        "priority_score": 84.0, "ward": "hsr_layout",
-    },
-    {
-        "category": "streetlight",
-        "description": "Three streetlights are out along 24th Main near HSR Sector 2 Park, leaving the walking stretch dark after 8 pm.",
-        "latitude": 12.9162, "longitude": 77.6430,
-        "priority_score": 78.0, "ward": "hsr_layout",
-    },
-    {
-        "category": "pothole",
-        "description": "Road surface has broken up outside the Agara Lake entrance and collects water after light rain.",
-        "latitude": 12.9275, "longitude": 77.6486,
-        "priority_score": 71.0, "ward": "hsr_layout",
-    },
-    # ── Koramangala ─────────────────────────────────────────────────────────
-    {
-        "category": "waste",
-        "description": "Mixed waste is being dumped beside the 5th Block service road in Koramangala instead of being collected.",
-        "latitude": 12.9406, "longitude": 77.6189,
-        "priority_score": 66.0, "ward": "koramangala",
-    },
-    {
-        "category": "streetlight",
-        "description": "Streetlight near Koramangala Post Office flickers all night. Residents report unsafe conditions.",
-        "latitude": 12.9350, "longitude": 77.6245,
-        "priority_score": 58.0, "ward": "koramangala",
-    },
-    {
-        "category": "pothole",
-        "description": "Large uneven patch near Forum Mall signal is slowing buses and creating risk for cyclists.",
-        "latitude": 12.9344, "longitude": 77.6101,
-        "priority_score": 49.0, "ward": "koramangala",
-    },
-    # ── Indiranagar ─────────────────────────────────────────────────────────
-    {
         "category": "water",
-        "description": "Water main leak on 100 Feet Road near the metro station has been creating a waterlogged stretch for 3 days.",
-        "latitude": 12.9784, "longitude": 77.6408,
-        "priority_score": 42.0, "ward": "indiranagar",
+        "description": "Burst pipeline flooding the road near HSR East Hospital emergency entrance.",
+        "latitude": 12.9060, "longitude": 77.5940,
+        "priority_score": 86.0, "ward": "hsr_layout",
+    },
+    {
+        "category": "waste",
+        "description": "Garbage pile blocking pedestrian footpath near East Market entrance.",
+        "latitude": 12.9000, "longitude": 77.6060,
+        "priority_score": 64.0, "ward": "hsr_layout",
     },
     {
         "category": "streetlight",
-        "description": "Pedestrian lane connecting 12th Main to HAL Old Airport Road is unlit after 9 pm.",
-        "latitude": 12.9716, "longitude": 77.6412,
-        "priority_score": 35.0, "ward": "indiranagar",
-    },
-    {
-        "category": "pothole",
-        "description": "Small pothole reported near Domlur flyover; road is still passable but deteriorating.",
-        "latitude": 12.9609, "longitude": 77.6387,
-        "priority_score": 24.0, "ward": "indiranagar",
+        "description": "Broken streetlight array near North Bus Interchange (Resolved by BBMP ward crew).",
+        "latitude": 12.9100, "longitude": 77.6060,
+        "priority_score": 48.0, "ward": "hsr_layout",
     },
 ]
 
@@ -99,36 +60,10 @@ def demo_photo(label: str, color: str) -> str:
 
 def reset_demo_data() -> int:
     with sqlite3.connect(app.config["DATABASE_PATH"]) as connection:
-        seeded_ids = [row[0] for row in connection.execute(
-            "SELECT id FROM complaints WHERE is_demo_seed = 1"
-        )]
-        if DELETE_MARKERS:
-            marker_query = " OR ".join(
-                "LOWER(category) LIKE ? OR LOWER(description) LIKE ?"
-                for _ in DELETE_MARKERS
-            )
-            marker_values = [
-                v for m in DELETE_MARKERS
-                for v in (f"%{m}%", f"%{m}%")
-            ]
-            stale_ids = [row[0] for row in connection.execute(
-                f"SELECT id FROM complaints WHERE {marker_query}", marker_values
-            )]
-        else:
-            stale_ids = []
-
-        ids_to_delete = sorted(set(seeded_ids + stale_ids))
-        if ids_to_delete:
-            placeholders = ",".join("?" * len(ids_to_delete))
-            connection.execute(
-                f"DELETE FROM resolution_ledger WHERE complaint_id IN ({placeholders})",
-                ids_to_delete,
-            )
-            connection.execute(
-                f"DELETE FROM complaints WHERE id IN ({placeholders})",
-                ids_to_delete,
-            )
-        return len(ids_to_delete)
+        count = connection.execute("SELECT COUNT(*) FROM complaints").fetchone()[0]
+        connection.execute("DELETE FROM resolution_ledger")
+        connection.execute("DELETE FROM complaints")
+        return count
 
 
 def seed_demo_data() -> list[int]:
@@ -137,11 +72,13 @@ def seed_demo_data() -> list[int]:
     for index, report in enumerate(DEMO_REPORTS):
         payload = {**report, "is_demo_seed": True}
         if index == 0:
-            payload["photo_data"] = demo_photo("Citizen photo — HSR Pothole", "#007f8f")
+            payload["photo_data"] = demo_photo("Pothole — School Corridor", "#007f8f")
         elif index == 1:
-            payload["photo_data"] = demo_photo("Original report — HSR Waste", "#00b8a5")
-        elif index == 4:
-            payload["photo_data"] = demo_photo("Koramangala report", "#a76316")
+            payload["photo_data"] = demo_photo("Water Leak — Hospital Route", "#00b8a5")
+        elif index == 2:
+            payload["photo_data"] = demo_photo("Waste Dump — Market Zone", "#a76316")
+        elif index == 3:
+            payload["photo_data"] = demo_photo("Streetlight — Bus Terminal", "#063b42")
 
         response = client.post("/api/complaints", json=payload)
         if response.status_code not in (200, 201):
@@ -150,20 +87,14 @@ def seed_demo_data() -> list[int]:
             )
         complaint_id = response.get_json()["id"]
         created_ids.append(complaint_id)
-        # Override priority with pre-set demo values for reproducibility
         with sqlite3.connect(app.config["DATABASE_PATH"]) as connection:
             connection.execute(
                 "UPDATE complaints SET priority_score = ? WHERE id = ?",
                 (report["priority_score"], complaint_id),
             )
 
-    # Resolve first 3 reports with proof photos across different wards
-    resolve_indices = [0, 1, 4]  # HSR pothole, HSR waste, Koramangala waste
-    for idx in resolve_indices:
-        complaint_id = created_ids[idx]
-        ward = DEMO_REPORTS[idx]["ward"]
-        # Always use direct DB write — seed script doesn't go through auth
-        _direct_resolve(complaint_id, ward)
+    # Resolve 4th complaint (streetlight) with proof photo + ledger entry
+    _direct_resolve(created_ids[3], "HSR Bus Terminal")
 
     return created_ids
 
@@ -208,7 +139,6 @@ def _direct_resolve(complaint_id: int, ward: str) -> None:
 if __name__ == "__main__":
     deleted = reset_demo_data()
     ids = seed_demo_data()
-    print(f"✓ Demo reset removed {deleted} old rows.")
-    print(f"✓ Seeded {len(ids)} complaints across HSR Layout, Koramangala, Indiranagar.")
-    print(f"  IDs: {ids}")
-    print(f"  Resolved: {ids[0]}, {ids[1]}, {ids[4]} (with proof photos + ledger entries)")
+    print(f"[OK] Wiped {deleted} old database rows.")
+    print(f"[OK] Seeded exactly 4 HSR Layout complaints: {ids}")
+    print(f"[OK] Complaint #{ids[3]} resolved with proof photo + SHA-256 ledger seal.")

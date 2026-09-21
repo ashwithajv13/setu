@@ -202,6 +202,78 @@ def nearest_node(graph: nx.Graph, latitude: float, longitude: float) -> str:
     )
 
 
+def ward_centroid(graph: nx.Graph) -> tuple[float, float]:
+    """Calculate the centroid (mean lat, mean lng) for a ward's road network graph."""
+    lats = [graph.nodes[nid]["latitude"] for nid in graph.nodes]
+    lngs = [graph.nodes[nid]["longitude"] for nid in graph.nodes]
+    return (sum(lats) / len(lats), sum(lngs) / len(lngs))
+
+
+def is_location_in_ward_boundary(
+    graph: nx.Graph,
+    latitude: float,
+    longitude: float,
+    threshold_meters: float = 1500.0,
+) -> bool:
+    """Return True if (latitude, longitude) is within threshold_meters of any node in graph."""
+    min_dist = min(
+        distance_in_meters(
+            latitude,
+            longitude,
+            graph.nodes[nid]["latitude"],
+            graph.nodes[nid]["longitude"],
+        )
+        for nid in graph.nodes
+    )
+    return min_dist <= threshold_meters
+
+
+def find_best_ward_for_location(
+    latitude: float,
+    longitude: float,
+    preferred_ward: str | None = None,
+) -> tuple[str, bool]:
+    """
+    Determine ward for location:
+    1. If preferred_ward's graph boundary contains location -> (preferred_ward, False)
+    2. Else if location falls within any mapped ward's boundary -> (matching_ward, False)
+    3. Else fallback to nearest ward using straight-line distance to ward centroids -> (nearest_ward, True)
+    """
+    if preferred_ward and preferred_ward in WARD_GRAPHS:
+        if is_location_in_ward_boundary(WARD_GRAPHS[preferred_ward], latitude, longitude):
+            return preferred_ward, False
+
+    best_matching_ward = None
+    best_node_dist = float("inf")
+    for ward_id, graph in WARD_GRAPHS.items():
+        min_node_dist = min(
+            distance_in_meters(
+                latitude,
+                longitude,
+                graph.nodes[nid]["latitude"],
+                graph.nodes[nid]["longitude"],
+            )
+            for nid in graph.nodes
+        )
+        if min_node_dist <= 1500.0 and min_node_dist < best_node_dist:
+            best_node_dist = min_node_dist
+            best_matching_ward = ward_id
+
+    if best_matching_ward:
+        return best_matching_ward, False
+
+    closest_ward = None
+    min_centroid_dist = float("inf")
+    for ward_id, graph in WARD_GRAPHS.items():
+        c_lat, c_lng = ward_centroid(graph)
+        c_dist = distance_in_meters(latitude, longitude, c_lat, c_lng)
+        if c_dist < min_centroid_dist:
+            min_centroid_dist = c_dist
+            closest_ward = ward_id
+
+    return closest_ward or "hsr_layout", True
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Priority scoring
 # ─────────────────────────────────────────────────────────────────────────────

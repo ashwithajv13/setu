@@ -138,6 +138,14 @@
             row.append(el("span", "verify-meta-label", label + ":"), el("span", "", value));
             meta.append(row);
           });
+          if (c.is_approximate_ward || c.ward_note) {
+            const approxRow = el("div", "verify-meta-row approx-note-row");
+            approxRow.append(
+              el("span", "verify-meta-label", "Note:"),
+              el("span", "approx-ward-note", c.ward_note || "Approximate ward assignment — nearest mapped area used.")
+            );
+            meta.append(approxRow);
+          }
           result.append(meta);
         }
 

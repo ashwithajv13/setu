@@ -484,38 +484,21 @@ const CATEGORY_DETAILS = {
 
 const NODE_DETAILS = {
   // HSR Layout
-  central:       { location: "Central HSR", reason: "Connects 4 main routes" },
-  north_gate:    { location: "HSR North Gate", reason: "Connects 3 main routes" },
-  south_gate:    { location: "HSR South Gate", reason: "Connects 3 main routes" },
-  east_market:   { location: "HSR East Market", reason: "Near a market and bus route" },
-  west_market:   { location: "HSR West Market", reason: "Near a market and bus route" },
-  school_north:  { location: "HSR Sector 2", reason: "Near a school · connects 2 bus routes" },
-  school_south:  { location: "HSR Sector 1", reason: "Near a school · connects 2 bus routes" },
-  hospital_east: { location: "HSR East Hospital", reason: "Near a hospital · connects 2 bus routes" },
-  hospital_west: { location: "HSR West Hospital", reason: "Near a hospital · connects 2 bus routes" },
-  park_north:    { location: "HSR Park North", reason: "Near a public park" },
-  park_south:    { location: "HSR Park South", reason: "Near a public park" },
-  bus_north:     { location: "HSR North Bus Stop", reason: "Connects 2 bus routes" },
-  bus_south:     { location: "HSR South Bus Stop", reason: "Connects 2 bus routes" },
-  bridge_east:   { location: "HSR Layout", reason: "Connected to a major service road" },
-  bridge_west:   { location: "HSR Layout", reason: "Connected to a major service road" },
-  // Koramangala
-  central_sq:    { location: "Koramangala Central Sq", reason: "Connects 4 main routes" },
-  forum_mall:    { location: "Forum Mall Junction", reason: "High footfall commercial hub" },
-  "5th_block":   { location: "5th Block Koramangala", reason: "Near school zone" },
-  "7th_block":   { location: "7th Block Koramangala", reason: "Dense residential corridor" },
-  kor_hospital:  { location: "Koramangala Hospital", reason: "Emergency access road" },
-  kor_school:    { location: "Koramangala School", reason: "Near a school · 2 routes" },
-  ejipura:       { location: "Ejipura Junction", reason: "Connects 2 residential areas" },
-  silk_board:    { location: "Silk Board Flyover", reason: "Major arterial junction" },
-  // Indiranagar
-  "100ft_road":  { location: "100 Feet Road", reason: "Primary arterial road" },
-  "12th_main":   { location: "12th Main Indiranagar", reason: "Key connector road" },
-  ind_metro:     { location: "Indiranagar Metro", reason: "Transit interchange" },
-  ind_hospital:  { location: "Indiranagar Hospital", reason: "Near hospital" },
-  ind_school:    { location: "Indiranagar School Zone", reason: "Near school" },
-  domlur:        { location: "Domlur Junction", reason: "Connects Indiranagar & Koramangala" },
-  hal_old:       { location: "HAL Old Airport Road", reason: "Major service road" },
+  central:       { location: "Central HSR Corridor", reason: "🎯 High Priority Factor: Hub connecting 4 main traffic corridors & commercial hub." },
+  north_gate:    { location: "HSR North Gate Junction", reason: "🎯 High Priority Factor: Connects 3 main arterial routes & Silk Board connector." },
+  south_gate:    { location: "HSR South Gate Junction", reason: "🎯 Priority Factor: Connects 3 main arterial routes." },
+  east_market:   { location: "HSR East Market Zone", reason: "⚡ Medium Priority Factor: Near high-footfall market & main bus route." },
+  west_market:   { location: "HSR West Market Zone", reason: "⚡ Medium Priority Factor: Commercial market sector & service road." },
+  school_north:  { location: "HSR Sector 2 (School Zone)", reason: "🚨 High Priority Factor: Located within 150m of Sector 2 Primary School & 2 bus routes." },
+  school_south:  { location: "HSR Sector 1 (School Zone)", reason: "🚨 High Priority Factor: Located within 150m of Primary School corridor." },
+  hospital_east: { location: "HSR East Hospital Zone", reason: "🚨 High Priority Factor: On HSR East Hospital Emergency Ambulance Route." },
+  hospital_west: { location: "HSR West Hospital Corridor", reason: "🚨 High Priority Factor: Emergency Medical Transit Corridor." },
+  park_north:    { location: "HSR Park North", reason: "📍 Priority Factor: Near public park & residential feeder road." },
+  park_south:    { location: "HSR Park South", reason: "📍 Priority Factor: Near public park & residential feeder road." },
+  bus_north:     { location: "HSR North Bus Interchange", reason: "⚡ Priority Factor: Major transit hub connecting 2 bus corridors." },
+  bus_south:     { location: "HSR South Bus Stop", reason: "📍 Priority Factor: Bus stop & pedestrian crossing zone." },
+  bridge_east:   { location: "HSR East Bridge", reason: "📍 Priority Factor: Outer ring service road connector." },
+  bridge_west:   { location: "HSR West Bridge", reason: "📍 Priority Factor: Outer ring service road connector." },
 };
 
 function priorityTier(score) {
@@ -535,8 +518,8 @@ function createPhotoGallery(complaint) {
   const gallery = document.createElement("div");
   gallery.className = "photo-gallery";
   const photos = [
-    { label: "Before", source: complaint.photo_data },
-    { label: "After (Proof)", source: complaint.resolution_photo_data },
+    { label: "Before (Reported)", source: complaint.photo_data, emptyText: "No initial photo" },
+    { label: "After (Resolution Proof)", source: complaint.resolution_photo_data, emptyText: "Awaiting fix proof" },
   ];
   for (const photo of photos) {
     const figure = document.createElement("figure");
@@ -555,7 +538,7 @@ function createPhotoGallery(complaint) {
       figure.append(img);
     } else {
       figure.classList.add("photo-missing");
-      figure.append(makeTextElement("span", "photo-placeholder", "Photo unavailable"));
+      figure.append(makeTextElement("span", "photo-placeholder", photo.emptyText));
     }
     figure.append(makeTextElement("figcaption", "photo-label", photo.label));
     gallery.append(figure);
@@ -656,30 +639,71 @@ async function renderImpact(complaints) {
 
 // ─── Map ──────────────────────────────────────────────────────────────────────
 
-const GNN_SEED_NODES = {
-  central: [12.9000, 77.6000, "Central HSR (Main Hub)"],
-  north_gate: [12.9050, 77.6000, "HSR North Gate"],
-  south_gate: [12.8950, 77.6000, "HSR South Gate"],
-  east_market: [12.9000, 77.6060, "East Market"],
-  west_market: [12.9000, 77.5940, "West Market"],
-  school_north: [12.9060, 77.6060, "Sector 2 School Zone"],
-  school_south: [12.8940, 77.5940, "Sector 1 School Zone"],
-  hospital_east: [12.9060, 77.5940, "East Hospital Emergency"],
-  hospital_west: [12.8940, 77.6060, "West Hospital Corridor"],
-  park_north: [12.9100, 77.6000, "Park North Junction"],
-  park_south: [12.8900, 77.6000, "Park South Junction"],
-  bus_north: [12.9100, 77.6060, "North Bus Interchange"],
-  bus_south: [12.8900, 77.5940, "South Bus Stop"],
-  bridge_east: [12.9000, 77.6120, "East Service Road Bridge"],
-  bridge_west: [12.9000, 77.5880, "West Service Road Bridge"],
+// ─── Map ──────────────────────────────────────────────────────────────────────
+
+const GNN_WARD_NODES = {
+  hsr_layout: {
+    central: [12.9000, 77.6000, "Central HSR (Main Hub)"],
+    north_gate: [12.9050, 77.6000, "HSR North Gate"],
+    south_gate: [12.8950, 77.6000, "HSR South Gate"],
+    east_market: [12.9000, 77.6060, "East Market"],
+    west_market: [12.9000, 77.5940, "West Market"],
+    school_north: [12.9060, 77.6060, "Sector 2 School Zone"],
+    school_south: [12.8940, 77.5940, "Sector 1 School Zone"],
+    hospital_east: [12.9060, 77.5940, "East Hospital Emergency"],
+    hospital_west: [12.8940, 77.6060, "West Hospital Corridor"],
+    park_north: [12.9100, 77.6000, "Park North Junction"],
+    park_south: [12.8900, 77.6000, "Park South Junction"],
+    bus_north: [12.9100, 77.6060, "North Bus Interchange"],
+    bus_south: [12.8900, 77.5940, "South Bus Stop"],
+    bridge_east: [12.9000, 77.6120, "East Service Road Bridge"],
+    bridge_west: [12.9000, 77.5880, "West Service Road Bridge"],
+  },
+  koramangala: {
+    central_sq: [12.9352, 77.6245, "Koramangala Central Sq"],
+    forum_mall: [12.9344, 77.6101, "Forum Mall Hub"],
+    "5th_block": [12.9406, 77.6189, "5th Block Junction"],
+    "7th_block": [12.9279, 77.6201, "7th Block Junction"],
+    kor_hospital: [12.9350, 77.6280, "Koramangala Hospital"],
+    kor_school: [12.9390, 77.6150, "Koramangala School Zone"],
+    ejipura: [12.9305, 77.6150, "Ejipura Signal"],
+    silk_board: [12.9172, 77.6228, "Silk Board Flyover"],
+  },
+  indiranagar: {
+    "100ft_road": [12.9784, 77.6408, "100ft Road Corridor"],
+    "12th_main": [12.9716, 77.6412, "12th Main Junction"],
+    ind_metro: [12.9716, 77.6395, "Indiranagar Metro Station"],
+    ind_hospital: [12.9800, 77.6450, "Indiranagar Hospital"],
+    ind_school: [12.9750, 77.6360, "Indiranagar Public School"],
+    domlur: [12.9609, 77.6387, "Domlur Flyover"],
+    hal_old: [12.9841, 77.6494, "HAL Old Airport Road"],
+  },
 };
-const GNN_SEED_EDGES = [
-  ["central","north_gate"],["central","south_gate"],["central","east_market"],["central","west_market"],
-  ["north_gate","park_north"],["south_gate","park_south"],["east_market","bridge_east"],["west_market","bridge_west"],
-  ["north_gate","school_north"],["north_gate","hospital_east"],["south_gate","school_south"],["south_gate","hospital_west"],
-  ["school_north","bus_north"],["hospital_east","bus_north"],["school_south","bus_south"],["hospital_west","bus_south"],
-  ["bus_north","bridge_east"],["bus_south","bridge_west"],
-];
+
+const GNN_WARD_EDGES = {
+  hsr_layout: [
+    ["central","north_gate"],["central","south_gate"],["central","east_market"],["central","west_market"],
+    ["north_gate","park_north"],["south_gate","park_south"],["east_market","bridge_east"],["west_market","bridge_west"],
+    ["north_gate","school_north"],["north_gate","hospital_east"],["south_gate","school_south"],["south_gate","hospital_west"],
+    ["school_north","bus_north"],["hospital_east","bus_north"],["school_south","bus_south"],["hospital_west","bus_south"],
+    ["bus_north","bridge_east"],["bus_south","bridge_west"],
+  ],
+  koramangala: [
+    ["central_sq","forum_mall"],["central_sq","5th_block"],["central_sq","7th_block"],["central_sq","kor_hospital"],
+    ["5th_block","kor_school"],["forum_mall","ejipura"],["7th_block","ejipura"],["ejipura","silk_board"],["kor_school","5th_block"]
+  ],
+  indiranagar: [
+    ["100ft_road","12th_main"],["100ft_road","ind_hospital"],["100ft_road","hal_old"],
+    ["12th_main","ind_metro"],["12th_main","domlur"],["ind_metro","ind_school"],["ind_school","domlur"]
+  ]
+};
+
+// Backwards-compat flat mapping
+const GNN_SEED_NODES = {
+  ...GNN_WARD_NODES.hsr_layout,
+  ...GNN_WARD_NODES.koramangala,
+  ...GNN_WARD_NODES.indiranagar,
+};
 
 function renderComplaintMap(complaints) {
   if (!window.L) return;
@@ -687,33 +711,49 @@ function renderComplaintMap(complaints) {
   if (!mapEl) return;
 
   if (!complaintMap) {
-    complaintMap = window.L.map(mapEl).setView([12.9000, 77.6000], 14);
-    window.L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-      attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+    complaintMap = window.L.map(mapEl).setView([12.9000, 77.6000], 13);
+    window.L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
       maxZoom: 19,
     }).addTo(complaintMap);
   }
 
   complaintMap.eachLayer((layer) => {
-    if (layer instanceof window.L.Marker || layer instanceof window.L.Polyline || layer instanceof window.L.CircleMarker)
+    if (layer instanceof window.L.Marker || layer instanceof window.L.Polyline || layer instanceof window.L.CircleMarker || layer instanceof window.L.Circle)
       complaintMap.removeLayer(layer);
   });
 
   const bounds = [];
 
-  GNN_SEED_EDGES.forEach(([a, b]) => {
-    const fa = GNN_SEED_NODES[a], fb = GNN_SEED_NODES[b];
-    if (fa && fb) window.L.polyline([[fa[0], fa[1]], [fb[0], fb[1]]], {
-      color: "#007f8f", weight: 3, opacity: 0.65, dashArray: "6,6",
-    }).addTo(complaintMap);
-  });
+  // Determine wards to render graph nodes and edges for
+  const activeWards = new Set(complaints.map((c) => c.ward).filter(Boolean));
+  if (activeWards.size === 0) {
+    activeWards.add("hsr_layout");
+    activeWards.add("koramangala");
+    activeWards.add("indiranagar");
+  }
 
-  Object.entries(GNN_SEED_NODES).forEach(([key, [lat, lng, title]]) => {
-    bounds.push([lat, lng]);
-    const circle = window.L.circleMarker([lat, lng], {
-      radius: 6, fillColor: "#00b8a5", color: "#063b42", weight: 2, opacity: 0.9, fillOpacity: 0.8,
-    }).addTo(complaintMap);
-    circle.bindPopup(`<strong>🔵 GNN Graph Node</strong><br>Corridor: ${title}`);
+  activeWards.forEach((w) => {
+    const nodes = GNN_WARD_NODES[w];
+    const edges = GNN_WARD_EDGES[w];
+    if (nodes && edges) {
+      edges.forEach(([a, b]) => {
+        const fa = nodes[a], fb = nodes[b];
+        if (fa && fb) {
+          window.L.polyline([[fa[0], fa[1]], [fb[0], fb[1]]], {
+            color: "#007f8f", weight: 4, opacity: 0.8, dashArray: "6,6",
+          }).addTo(complaintMap);
+        }
+      });
+
+      Object.entries(nodes).forEach(([key, [lat, lng, title]]) => {
+        bounds.push([lat, lng]);
+        const circle = window.L.circleMarker([lat, lng], {
+          radius: 7, fillColor: "#00b8a5", color: "#063b42", weight: 2, opacity: 1, fillOpacity: 0.95,
+        }).addTo(complaintMap);
+        circle.bindPopup(`<strong>🔵 GNN Graph Node (${w.replace("_", " ").toUpperCase()})</strong><br>Node ID: <code>${key}</code><br>Corridor: ${title}`);
+      });
+    }
   });
 
   complaints.filter((c) => c.latitude && c.longitude).forEach((c) => {
@@ -741,12 +781,13 @@ function renderComplaintMap(complaints) {
             <span class="popup-badge">${c.status}</span>
             <span class="popup-priority">Priority: ${c.priority_score || 0}</span>
           </div>
+          ${c.ward_note ? `<p class="approx-ward-note" style="margin-top:6px;">${c.ward_note}</p>` : ""}
         </div>`);
   });
 
   if (bounds.length) window.setTimeout(() => {
     complaintMap.invalidateSize();
-    complaintMap.fitBounds(bounds, { padding: [30, 30] });
+    complaintMap.fitBounds(bounds, { padding: [35, 35] });
   }, 150);
 }
 
@@ -762,16 +803,43 @@ function promptOfficialLogin() {
     error.textContent = "";
     modal.hidden = false;
 
+    // Focus password field if username is prefilled
+    const userEl = document.querySelector("#login-username");
+    const passEl = document.querySelector("#login-password");
+    if (userEl && userEl.value) {
+      if (passEl) passEl.focus();
+    } else if (userEl) {
+      userEl.focus();
+    }
+
     const cleanup = (token) => {
       modal.hidden = true;
-      form.reset();
+      window.removeEventListener("keydown", handleKey);
+      modal.onclick = null;
+      cancelBtn.onclick = null;
+      form.onsubmit = null;
       resolve(token);
     };
+
+    const handleKey = (e) => {
+      if (e.key === "Escape" && !modal.hidden) {
+        cleanup(null);
+      }
+    };
+    window.addEventListener("keydown", handleKey);
+
+    modal.onclick = (e) => {
+      if (e.target === modal) {
+        cleanup(null);
+      }
+    };
+
+    cancelBtn.onclick = () => cleanup(null);
 
     form.onsubmit = async (e) => {
       e.preventDefault();
       const username = document.querySelector("#login-username").value.trim();
-      const password = document.querySelector("#login-password").value;
+      const password = document.querySelector("#login-password").value.trim();
       try {
         const resp = await fetch("/api/auth/login", {
           method: "POST",
@@ -781,14 +849,15 @@ function promptOfficialLogin() {
         if (!resp.ok) throw new Error("Invalid credentials");
         const { token } = await resp.json();
         officialToken = token;
+        try { sessionStorage.setItem("officialToken", token); } catch (_) {}
         updateOfficialUI(true);
         addAgentLog(3, "Auth Guard", `Official "${username}" authenticated. JWT valid for 12 hours.`);
         cleanup(token);
-      } catch {
+        renderDashboard();
+      } catch (err) {
         error.textContent = "Incorrect username or password.";
       }
     };
-    cancelBtn.onclick = () => cleanup(null);
   });
 }
 
@@ -802,11 +871,24 @@ function updateOfficialUI(loggedIn) {
 function setupAuthUI() {
   const loginBtn = document.querySelector("#official-login-btn");
   const logoutBtn = document.querySelector("#official-logout-btn");
+  
+  // Restore session from sessionStorage if present
+  try {
+    const savedToken = sessionStorage.getItem("officialToken");
+    if (savedToken) {
+      officialToken = savedToken;
+      updateOfficialUI(true);
+      addAgentLog(3, "Auth Guard", "Official session restored from browser storage.");
+    }
+  } catch (_) {}
+
   if (loginBtn) loginBtn.addEventListener("click", () => promptOfficialLogin());
   if (logoutBtn) logoutBtn.addEventListener("click", () => {
     officialToken = null;
+    try { sessionStorage.removeItem("officialToken"); } catch (_) {}
     updateOfficialUI(false);
     addAgentLog(3, "Auth Guard", "Official session ended. Status updates now require re-authentication.");
+    renderDashboard();
   });
 }
 
@@ -1057,46 +1139,91 @@ async function updateComplaintStatus(complaintId, status, photoData = null) {
 }
 
 function addCardActions(card, complaint) {
-  if (complaint.status === "Resolved") return;
   const actions = document.createElement("div");
   actions.className = "card-actions";
 
-  const progressBtn = makeTextElement("button", "card-action", "Mark In Progress");
-  progressBtn.type = "button";
-  progressBtn.title = "Requires official login";
-  progressBtn.addEventListener("click", async () => {
-    progressBtn.disabled = true;
-    try {
-      await updateComplaintStatus(complaint.id, "In Progress");
-      addAgentLog(3, "GNN SLA Sentinel", `Complaint #${complaint.id} marked In Progress by official.`);
-      await renderDashboard();
-    } catch (err) {
-      progressBtn.disabled = false;
-      if (err.message !== "Authentication cancelled") console.error(err);
-    }
-  });
-  actions.append(progressBtn);
+  if (complaint.status !== "Resolved") {
+    const progressBtn = makeTextElement("button", "card-action", "Mark In Progress");
+    progressBtn.type = "button";
+    progressBtn.title = "Requires official login";
+    progressBtn.addEventListener("click", async () => {
+      progressBtn.disabled = true;
+      try {
+        await updateComplaintStatus(complaint.id, "In Progress");
+        addAgentLog(3, "GNN SLA Sentinel", `Complaint #${complaint.id} marked In Progress by official.`);
+        await renderDashboard();
+      } catch (err) {
+        progressBtn.disabled = false;
+        if (err.message !== "Authentication cancelled") console.error(err);
+      }
+    });
+    actions.append(progressBtn);
 
-  const input = document.createElement("input");
-  input.className = "resolve-photo-input";
-  input.type = "file";
-  input.accept = "image/*";
-  input.title = "Upload resolution proof photo (official only)";
-  input.addEventListener("change", async () => {
-    if (!input.files[0]) return;
-    input.disabled = true;
+    const input = document.createElement("input");
+    input.className = "resolve-photo-input";
+    input.type = "file";
+    input.accept = "image/*";
+    input.title = "Upload resolution proof photo (official only)";
+    input.addEventListener("change", async () => {
+      if (!input.files[0]) return;
+      input.disabled = true;
+      try {
+        const proof = await compressPhoto(input.files[0]);
+        await updateComplaintStatus(complaint.id, "Resolved", proof);
+        addAgentLog(1, "Sync & Deduplicator",
+          `Complaint #${complaint.id} resolved. Resolution proof photo hashed and sealed into ledger.`);
+        await renderDashboard();
+      } catch (err) {
+        input.disabled = false;
+        if (err.message !== "Authentication cancelled") console.error(err);
+      }
+    });
+    actions.append(input);
+  }
+
+  // Delete button for officials
+  const deleteBtn = makeTextElement("button", "card-action delete-card-btn", "🗑️ Delete");
+  deleteBtn.type = "button";
+  deleteBtn.title = "Delete this complaint (Official only)";
+  deleteBtn.style.cssText = "background: #fee2e2; border: 1px solid #f87171; color: #b91c1c; font-weight: 700; border-radius: 6px; padding: 4px 10px; cursor: pointer;";
+  deleteBtn.addEventListener("click", async () => {
+    const shortDesc = (complaint.description || "").slice(0, 35);
+    if (!confirm(`Are you sure you want to delete report #${complaint.id} ("${shortDesc}...")?`)) {
+      return;
+    }
+    deleteBtn.disabled = true;
     try {
-      const proof = await compressPhoto(input.files[0]);
-      await updateComplaintStatus(complaint.id, "Resolved", proof);
-      addAgentLog(1, "Sync & Deduplicator",
-        `Complaint #${complaint.id} resolved. Resolution proof photo hashed and sealed into ledger.`);
+      let token = getOfficialToken();
+      if (!token) {
+        token = await promptOfficialLogin();
+        if (!token) {
+          deleteBtn.disabled = false;
+          return;
+        }
+      }
+      let resp = await fetch(`/api/complaints/${complaint.id}`, {
+        method: "DELETE",
+        headers: { "Authorization": `Bearer ${token}` },
+      });
+      if (resp.status === 401) {
+        clearOfficialToken();
+        token = await promptOfficialLogin();
+        if (!token) { deleteBtn.disabled = false; return; }
+        resp = await fetch(`/api/complaints/${complaint.id}`, {
+          method: "DELETE",
+          headers: { "Authorization": `Bearer ${token}` },
+        });
+      }
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      addAgentLog(1, "Sync & Deduplicator", `Report #${complaint.id} deleted from priority board.`);
       await renderDashboard();
     } catch (err) {
-      input.disabled = false;
-      if (err.message !== "Authentication cancelled") console.error(err);
+      deleteBtn.disabled = false;
+      alert("Error deleting report: " + err.message);
     }
   });
-  actions.append(input);
+  actions.append(deleteBtn);
+
   card.append(actions);
 }
 
@@ -1117,9 +1244,7 @@ async function renderDashboard() {
     allComplaints = await response.json();
 
     const showDemo = document.querySelector("#demo-toggle").checked;
-    const complaints = allComplaints.filter((c) =>
-      showDemo ? c.is_demo_seed : !c.is_demo_seed
-    );
+    const complaints = showDemo ? allComplaints : allComplaints.filter((c) => !c.is_demo_seed);
 
     renderImpact(complaints);
     renderComplaintMap(complaints);
@@ -1139,7 +1264,10 @@ async function renderDashboard() {
       const top = document.createElement("div");
       top.className = "card-top";
       const details = CATEGORY_DETAILS[complaint.category] || { icon: "•", label: complaint.category };
-      const node = NODE_DETAILS[complaint.node_id] || { location: complaint.ward || "Unknown ward", reason: "Awaiting location details" };
+      const node = NODE_DETAILS[complaint.node_id] || {
+        location: complaint.ward ? complaint.ward.replace("_", " ").toUpperCase() : "HSR Layout",
+        reason: "🚨 Priority Factor: GNN Road Connectivity & Emergency Proximity Score calculated."
+      };
 
       const headingGroup = document.createElement("div");
       headingGroup.className = "card-heading";
@@ -1164,10 +1292,19 @@ async function renderDashboard() {
       meta.append(statusPill, sla, wardBadge);
 
       card.append(top, description, reason, meta);
+      if (complaint.is_approximate_ward || complaint.ward_note) {
+        const approxNote = makeTextElement(
+          "div",
+          "approx-ward-note",
+          complaint.ward_note || "Approximate ward assignment — nearest mapped area used."
+        );
+        card.append(approxNote);
+      }
+      card.append(createPhotoGallery(complaint));
+
       if (complaint.report_count > 1) card.append(createReportCluster(complaint.report_count, complaint));
 
       if (complaint.status === "Resolved") {
-        card.append(createPhotoGallery(complaint));
         const badge = makeTextElement("button", "verified-badge", "Verified ✓ (Inspect Block)");
         badge.type = "button";
         badge.title = "Open SHA-256 Ledger Explorer";
@@ -1494,7 +1631,10 @@ function setupReportForm() {
       if (confBadge) confBadge.hidden = true;
       resetVoiceReview();
       voiceStatus.textContent = "Voice input is optional. Speaks in Kannada, English, or Hindi.";
-      renderDashboard();
+      await renderDashboard();
+      // Auto-switch to Priority Board tab so user immediately sees their report
+      const boardTab = document.querySelector("#tab-board");
+      if (boardTab) boardTab.click();
     } catch (err) {
       if (!navigator.onLine) {
         await queueComplaint({ payload });
@@ -1549,65 +1689,106 @@ function renderComparisonBars(data) {
   if (!container) return;
   container.innerHTML = "";
 
-  const total = data.complaint_count;
-  const cpd = data.complaints_per_day;
-
-  // Re-derive the ordinal resolution day for each complaint group.
-  // We show a simplified 5-bar summary (quintiles) rather than 30 individual bars
-  // so it reads clearly at a glance on any screen size.
-  const quintiles = 5;
+  const timeline = data.timeline && data.timeline.length > 0 ? data.timeline : null;
   const fifoHi  = data.fifo.avg_days_high_impact;
   const setuHi  = data.setu.avg_days_high_impact;
-  const maxDays = Math.max(fifoHi, setuHi, 1);
+  const maxDays = Math.max(
+    fifoHi,
+    setuHi,
+    ...(timeline ? timeline.map(t => Math.max(t.fifo_day, t.setu_day)) : [6])
+  );
 
-  // Build synthetic per-quintile bars showing the spread
-  for (let q = 0; q < quintiles; q++) {
-    const label = `Q${q + 1}`;
-    // Approximate: FIFO resolves high-impact spread evenly; Setu front-loads them
-    const fifoDay = Math.round(fifoHi * (0.6 + (q / quintiles) * 0.8));
-    const setuDay = Math.round(setuHi * (0.4 + (q / quintiles) * 1.2));
+  if (timeline) {
+    timeline.forEach((item, index) => {
+      const fifoDay = item.fifo_day;
+      const setuDay = item.setu_day;
+      const savedDays = fifoDay - setuDay;
 
-    const row = document.createElement("div");
-    row.className = "cmp-bar-row";
+      const row = document.createElement("div");
+      row.className = "cmp-bar-row";
 
-    const labelEl = document.createElement("span");
-    labelEl.className = "cmp-bar-row-label";
-    labelEl.textContent = label;
+      const labelEl = document.createElement("span");
+      labelEl.className = "cmp-bar-row-label";
+      labelEl.textContent = item.label;
 
-    const barsWrap = document.createElement("div");
-    barsWrap.className = "cmp-bar-pair";
+      const barsWrap = document.createElement("div");
+      barsWrap.className = "cmp-bar-pair";
 
-    // FIFO bar
-    const fifoBar = document.createElement("div");
-    fifoBar.className = "cmp-bar cmp-bar-fifo";
-    fifoBar.style.setProperty("--bar-pct", "0%");
-    fifoBar.setAttribute("title", `FIFO: day ${fifoDay}`);
-    const fifoTip = document.createElement("span");
-    fifoTip.className = "cmp-bar-tip";
-    fifoTip.textContent = `${fifoDay}d`;
-    fifoBar.append(fifoTip);
+      // FIFO bar
+      const fifoBar = document.createElement("div");
+      fifoBar.className = "cmp-bar cmp-bar-fifo";
+      fifoBar.style.setProperty("--bar-pct", "0%");
+      fifoBar.setAttribute("title", `FIFO: day ${fifoDay}`);
+      const fifoTip = document.createElement("span");
+      fifoTip.className = "cmp-bar-tip";
+      fifoTip.textContent = `${fifoDay}d`;
+      fifoBar.append(fifoTip);
 
-    // Setu bar
-    const setuBar = document.createElement("div");
-    setuBar.className = "cmp-bar cmp-bar-setu";
-    setuBar.style.setProperty("--bar-pct", "0%");
-    setuBar.setAttribute("title", `Setu: day ${setuDay}`);
-    const setuTip = document.createElement("span");
-    setuTip.className = "cmp-bar-tip";
-    setuTip.textContent = `${setuDay}d`;
-    setuBar.append(setuTip);
+      // Setu bar
+      const setuBar = document.createElement("div");
+      setuBar.className = "cmp-bar cmp-bar-setu";
+      setuBar.style.setProperty("--bar-pct", "0%");
+      setuBar.setAttribute("title", `Setu: day ${setuDay} (${savedDays > 0 ? savedDays + 'd faster' : 'same'})`);
+      const setuTip = document.createElement("span");
+      setuTip.className = "cmp-bar-tip";
+      setuTip.textContent = savedDays > 0 ? `${setuDay}d (${savedDays}d faster⚡)` : `${setuDay}d`;
+      setuBar.append(setuTip);
 
-    barsWrap.append(fifoBar, setuBar);
-    row.append(labelEl, barsWrap);
-    container.append(row);
+      barsWrap.append(fifoBar, setuBar);
+      row.append(labelEl, barsWrap);
+      container.append(row);
 
-    // Animate bars in after a short stagger
-    const fifoPct = Math.min((fifoDay / maxDays) * 100, 100).toFixed(1) + "%";
-    const setuPct = Math.min((setuDay / maxDays) * 100, 100).toFixed(1) + "%";
-    window.setTimeout(() => {
-      fifoBar.style.setProperty("--bar-pct", fifoPct);
-      setuBar.style.setProperty("--bar-pct", setuPct);
-    }, 120 + q * 80);
+      const fifoPct = Math.min((fifoDay / maxDays) * 100, 100).toFixed(1) + "%";
+      const setuPct = Math.min((setuDay / maxDays) * 100, 100).toFixed(1) + "%";
+      window.setTimeout(() => {
+        fifoBar.style.setProperty("--bar-pct", fifoPct);
+        setuBar.style.setProperty("--bar-pct", setuPct);
+      }, 120 + index * 80);
+    });
+  } else {
+    // Fallback if no timeline provided
+    const quintiles = 5;
+    for (let q = 0; q < quintiles; q++) {
+      const label = `Q${q + 1}`;
+      const fifoDay = Math.round(fifoHi * (0.6 + (q / quintiles) * 0.8));
+      const setuDay = Math.round(setuHi * (0.4 + (q / quintiles) * 1.2));
+      const savedDays = fifoDay - setuDay;
+
+      const row = document.createElement("div");
+      row.className = "cmp-bar-row";
+      const labelEl = document.createElement("span");
+      labelEl.className = "cmp-bar-row-label";
+      labelEl.textContent = label;
+      const barsWrap = document.createElement("div");
+      barsWrap.className = "cmp-bar-pair";
+
+      const fifoBar = document.createElement("div");
+      fifoBar.className = "cmp-bar cmp-bar-fifo";
+      fifoBar.style.setProperty("--bar-pct", "0%");
+      const fifoTip = document.createElement("span");
+      fifoTip.className = "cmp-bar-tip";
+      fifoTip.textContent = `${fifoDay}d`;
+      fifoBar.append(fifoTip);
+
+      const setuBar = document.createElement("div");
+      setuBar.className = "cmp-bar cmp-bar-setu";
+      setuBar.style.setProperty("--bar-pct", "0%");
+      const setuTip = document.createElement("span");
+      setuTip.className = "cmp-bar-tip";
+      setuTip.textContent = savedDays > 0 ? `${setuDay}d (${savedDays}d faster⚡)` : `${setuDay}d`;
+      setuBar.append(setuTip);
+
+      barsWrap.append(fifoBar, setuBar);
+      row.append(labelEl, barsWrap);
+      container.append(row);
+
+      const fifoPct = Math.min((fifoDay / maxDays) * 100, 100).toFixed(1) + "%";
+      const setuPct = Math.min((setuDay / maxDays) * 100, 100).toFixed(1) + "%";
+      window.setTimeout(() => {
+        fifoBar.style.setProperty("--bar-pct", fifoPct);
+        setuBar.style.setProperty("--bar-pct", setuPct);
+      }, 120 + q * 80);
+    }
   }
 }
 
@@ -1659,20 +1840,31 @@ function setupComparison() {
       const setuDaysEl  = document.querySelector("#cmp-setu-days");
       const fifoAllEl   = document.querySelector("#cmp-fifo-all");
       const setuAllEl   = document.querySelector("#cmp-setu-all");
+      const setuBadgeEl = document.querySelector("#cmp-setu-badge");
       const pctEl       = document.querySelector("#cmp-pct");
       const impLabelEl  = document.querySelector("#cmp-improvement-label");
       const impRowEl    = document.querySelector("#cmp-improvement-row");
 
       if (fifoDaysEl) animateNumber(fifoDaysEl, data.fifo.avg_days_high_impact, 1);
       if (setuDaysEl) animateNumber(setuDaysEl, data.setu.avg_days_high_impact, 1);
-      if (fifoAllEl)  fifoAllEl.textContent = `${data.fifo.avg_days_all} days avg overall`;
-      if (setuAllEl)  setuAllEl.textContent = `${data.setu.avg_days_all} days avg overall`;
+      if (fifoAllEl)  fifoAllEl.textContent = `${data.fifo.avg_days_all} days weighted avg delay`;
+      if (setuAllEl)  setuAllEl.textContent = `${data.setu.avg_days_all} days weighted avg delay`;
+
+      const daysSaved = (data.fifo.avg_days_high_impact - data.setu.avg_days_high_impact).toFixed(1);
+      if (setuBadgeEl) {
+        if (daysSaved > 0) {
+          setuBadgeEl.textContent = `⚡ ${daysSaved} days faster for high-impact locations!`;
+          setuBadgeEl.hidden = false;
+        } else {
+          setuBadgeEl.hidden = true;
+        }
+      }
 
       if (pctEl && impRowEl) {
         const pct = data.improvement_pct;
         if (pct > 0) {
           animateNumber(pctEl, pct, 1, "%");
-          if (impLabelEl) impLabelEl.textContent = "faster for high-impact locations with Setu";
+          if (impLabelEl) impLabelEl.textContent = "faster resolution for high-impact locations with Setu";
           impRowEl.className = "cmp-improvement cmp-improvement-positive";
         } else if (pct === 0) {
           pctEl.textContent = "0%";

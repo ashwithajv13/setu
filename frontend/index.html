@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Setu | Civic signal board</title>
-    <link rel="stylesheet" href="/styles.css?v=9">
+    <link rel="stylesheet" href="/styles.css?v=11">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   </head>
   <body>
@@ -295,8 +295,8 @@
               <div class="cmp-number-block cmp-fifo">
                 <span class="cmp-number-label">FIFO (submission order)</span>
                 <span class="cmp-number" id="cmp-fifo-days">—</span>
-                <span class="cmp-number-unit">days avg · high-impact</span>
-                <span class="cmp-number-sub" id="cmp-fifo-all">— days avg overall</span>
+                <span class="cmp-number-unit">days avg delay · high-impact</span>
+                <span class="cmp-number-sub" id="cmp-fifo-all">— days weighted avg delay</span>
               </div>
 
               <div class="cmp-vs-divider" aria-hidden="true">vs</div>
@@ -304,8 +304,9 @@
               <div class="cmp-number-block cmp-setu">
                 <span class="cmp-number-label">Setu priority order</span>
                 <span class="cmp-number" id="cmp-setu-days">—</span>
-                <span class="cmp-number-unit">days avg · high-impact</span>
-                <span class="cmp-number-sub" id="cmp-setu-all">— days avg overall</span>
+                <span class="cmp-number-unit">days avg delay · high-impact</span>
+                <span class="cmp-number-sub" id="cmp-setu-all">— days weighted avg delay</span>
+                <span class="cmp-setu-badge" id="cmp-setu-badge">⚡ Faster Resolution</span>
               </div>
             </div>
 
@@ -325,7 +326,7 @@
 
             <!-- Inline bar chart showing ordinal resolution position -->
             <div class="cmp-bar-section">
-              <p class="cmp-bar-title">Resolution order — high-impact complaints</p>
+              <p class="cmp-bar-title">Resolution order comparison — high-impact complaints (shorter bar = faster resolution)</p>
               <div class="cmp-bar-legend">
                 <span class="cmp-bar-key cmp-bar-key-fifo">FIFO position</span>
                 <span class="cmp-bar-key cmp-bar-key-setu">Setu position</span>
@@ -364,18 +365,19 @@
           <button id="login-cancel-btn" class="modal-close-btn" type="button" aria-label="Cancel login">&times;</button>
         </div>
         <div class="modal-body">
-          <p class="modal-subtext">Status updates require an authenticated official account. Credentials are verified server-side; a JWT is issued for this session only.</p>
+          <p class="modal-subtext">Status updates require an authenticated official account. Token will remain active for this browser session.</p>
+          <p class="login-hint">Demo login: username <code>official</code> · password <code>setu2024</code></p>
           <form id="login-form" novalidate>
             <label>
               Username
-              <input id="login-username" type="text" autocomplete="username" required placeholder="official">
+              <input id="login-username" name="username" type="text" autocomplete="username" required value="official" placeholder="official">
             </label>
             <label>
               Password
-              <input id="login-password" type="password" autocomplete="current-password" required placeholder="••••••••">
+              <input id="login-password" name="password" type="password" autocomplete="current-password" required value="setu2024" placeholder="setu2024">
             </label>
             <p id="login-error" class="login-error" role="alert" aria-live="assertive"></p>
-            <button type="submit">Login</button>
+            <button id="login-submit-btn" type="submit">Login</button>
           </form>
         </div>
       </div>
@@ -383,6 +385,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="/app.js?v=9"></script>
+    <script src="/app.js?v=11"></script>
   </body>
 </html>
