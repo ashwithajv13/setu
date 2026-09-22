@@ -1317,7 +1317,18 @@ async function renderDashboard() {
     }
   } catch (error) {
     count.textContent = "Unavailable";
-    list.replaceChildren(makeTextElement("p", "empty-state", "Dashboard unavailable. Try refreshing."));
+    const retryBtn = document.createElement("button");
+    retryBtn.className = "primary-button";
+    retryBtn.textContent = "🔄 Retry Connecting";
+    retryBtn.style.cssText = "margin-top: 12px; font-size: 0.88rem; padding: 8px 16px; cursor: pointer;";
+    retryBtn.addEventListener("click", () => renderDashboard());
+    const errContainer = document.createElement("div");
+    errContainer.className = "empty-state";
+    errContainer.append(
+      makeTextElement("p", "", "Dashboard connection lost. The server is restarting or reconnecting."),
+      retryBtn
+    );
+    list.replaceChildren(errContainer);
     console.error(error);
   } finally {
     refreshButton.disabled = false;
